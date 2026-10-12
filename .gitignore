@@ -1,0 +1,9 @@
+bin/
+*.html
+!internal/report/html/*.html
+coverage.out
+.env*
+!.env.example
+!docs/assets/sample-report.html
+.claude/*
+!.claude/launch.json

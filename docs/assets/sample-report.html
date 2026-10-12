@@ -1,0 +1,531 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>keyguard report: 14 findings</title>
+<style>:root {
+  --bg: #f6f7f9; --surface: #ffffff; --surface-2: #f0f2f5; --border: #dfe3e8;
+  --text: #15181d; --muted: #5b6573; --accent: #3b5bdb;
+  --high: #c92a2a; --high-bg: #fff0f0; --medium: #a35200; --medium-bg: #fff4e5;
+  --low: #1c6e8c; --low-bg: #e8f6fb; --good: #2b8a3e; --good-bg: #ebfbee;
+  --hit: #fff3bf; --code-bg: #f8f9fb;
+  --radius: 10px; --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #0f1115; --surface: #171a21; --surface-2: #1e222b; --border: #2a303b;
+    --text: #e8eaee; --muted: #9aa4b2; --accent: #8ea6ff;
+    --high: #ff8787; --high-bg: #2c1618; --medium: #ffb454; --medium-bg: #2b2012;
+    --low: #66c7e8; --low-bg: #11252d; --good: #69db7c; --good-bg: #13261a;
+    --hit: #3a3313; --code-bg: #12151b;
+    color-scheme: dark;
+  }
+}
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+html { scroll-padding-top: 72px; } /* keep focused findings clear of the sticky toolbar */
+body { margin: 0; background: var(--bg); color: var(--text); font: 15px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif; }
+code, pre { font-family: var(--mono); font-size: 0.86em; }
+.wrap { max-width: 1040px; margin: 0 auto; padding: 0 16px; }
+.sr-only { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; border: 0; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; user-select: none; }
+
+.top { background: var(--surface); border-bottom: 1px solid var(--border); padding: 24px 0 20px; }
+.brand { font-weight: 700; letter-spacing: .02em; color: var(--accent); }
+.brand .ver { color: var(--muted); font-weight: 500; font-size: .85em; }
+.logo { display: inline-block; transform: translateY(-1px); }
+h1 { margin: 6px 0 16px; font-size: 1.6rem; letter-spacing: -.01em; }
+.meta { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px 24px; margin: 0; }
+.meta div { min-width: 0; }
+.meta dt { color: var(--muted); font-size: .78rem; text-transform: uppercase; letter-spacing: .06em; }
+.meta dd { margin: 2px 0 0; overflow-wrap: anywhere; }
+
+.summary { display: grid; grid-template-columns: 2fr repeat(3, 1fr); gap: 12px; margin: 24px 0; }
+.card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px; display: flex; flex-direction: column; }
+.card .num { font-size: 2rem; font-weight: 700; line-height: 1.1; font-variant-numeric: tabular-nums; }
+.card .lbl { color: var(--muted); font-size: .9rem; }
+.card.total.bad { border-color: var(--high); background: var(--high-bg); }
+.card.total.good { border-color: var(--good); background: var(--good-bg); }
+.card.total.good .num { color: var(--good); }
+.sev-high .num { color: var(--high); } .sev-medium .num { color: var(--medium); } .sev-low .num { color: var(--low); }
+
+.toolbar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; position: sticky; top: 0; z-index: 2;
+  background: var(--bg); padding: 10px 0; border-bottom: 1px solid var(--border); }
+.chips { display: flex; gap: 6px; }
+.chip { font: inherit; font-size: .88rem; padding: 6px 12px; border-radius: 999px; border: 1px solid var(--border);
+  background: var(--surface); color: var(--muted); cursor: pointer; min-height: 36px; }
+.chip[aria-pressed="true"][data-sev="high"] { background: var(--high-bg); color: var(--high); border-color: var(--high); }
+.chip[aria-pressed="true"][data-sev="medium"] { background: var(--medium-bg); color: var(--medium); border-color: var(--medium); }
+.chip[aria-pressed="true"][data-sev="low"] { background: var(--low-bg); color: var(--low); border-color: var(--low); }
+.chip[aria-pressed="false"] { text-decoration: line-through; }
+.chip:hover { border-color: var(--muted); }
+.chip:active, .link:active { transform: translateY(1px); }
+.link:hover { text-decoration: underline; }
+.link:disabled { color: var(--muted); cursor: default; text-decoration: none; transform: none; }
+.field select, .field input { font: inherit; font-size: .9rem; padding: 7px 10px; min-height: 36px; border-radius: 8px;
+  border: 1px solid var(--border); background: var(--surface); color: var(--text); width: 100%; }
+.field.grow { flex: 1 1 200px; }
+.link { font: inherit; font-size: .9rem; background: none; border: 0; color: var(--accent); cursor: pointer; padding: 6px 4px; min-height: 36px; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.status { color: var(--muted); font-size: .85rem; margin: 10px 0 0; }
+.empty-filter { background: var(--surface); border: 1px dashed var(--border); border-radius: var(--radius); padding: 24px; text-align: center; color: var(--muted); }
+
+.group { margin: 28px 0; }
+.group h2 { font-size: 1.15rem; margin: 0; display: flex; align-items: center; gap: 8px; }
+.count { font-size: .8rem; background: var(--surface-2); color: var(--muted); border-radius: 999px; padding: 1px 9px; font-weight: 600; }
+.blurb { color: var(--muted); margin: 4px 0 12px; font-size: .92rem; }
+.list { display: flex; flex-direction: column; gap: 8px; }
+
+.finding { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; }
+.finding[open] { box-shadow: 0 2px 10px rgba(0,0,0,.06); }
+.finding summary { list-style: none; display: flex; gap: 12px; align-items: flex-start; padding: 12px 14px; cursor: pointer; }
+.finding summary::-webkit-details-marker { display: none; }
+.finding summary:hover { background: var(--surface-2); }
+.finding summary:focus-visible { outline-offset: -2px; } /* .finding clips overflow, so draw the ring inside */
+.badge { flex: none; font-size: .7rem; font-weight: 700; letter-spacing: .05em; padding: 3px 8px; border-radius: 6px; margin-top: 2px; min-width: 64px; text-align: center; }
+.badge.high { background: var(--high-bg); color: var(--high); }
+.badge.medium { background: var(--medium-bg); color: var(--medium); }
+.badge.low { background: var(--low-bg); color: var(--low); }
+.what { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.desc { font-weight: 600; }
+.where { color: var(--muted); overflow-wrap: anywhere; }
+.secret { background: var(--surface-2); padding: 1px 6px; border-radius: 4px; }
+.chev { flex: none; width: 10px; height: 10px; margin-top: 7px; border-right: 2px solid var(--muted); border-bottom: 2px solid var(--muted); transform: rotate(45deg); transition: transform .15s; }
+.finding[open] .chev { transform: rotate(225deg); margin-top: 11px; }
+.body { padding: 0 14px 14px; border-top: 1px solid var(--border); }
+.commit { background: var(--medium-bg); border-radius: 8px; padding: 8px 12px; margin: 12px 0 0; font-size: .9rem; }
+.code { background: var(--code-bg); border: 1px solid var(--border); border-radius: 8px; margin: 12px 0 0; padding: 8px 0; overflow-x: auto; line-height: 1.6; }
+.ln { display: block; padding: 0 12px 0 0; white-space: pre; }
+.ln .n { display: inline-block; width: 3.5em; padding-right: 1em; text-align: right; color: var(--muted); user-select: none; }
+.ln.hit { background: var(--hit); box-shadow: inset 3px 0 0 var(--medium); } /* bar, not just tint, marks the line */
+.ln.hit .n { color: var(--text); font-weight: 700; }
+.fix h3 { font-size: .8rem; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); margin: 14px 0 4px; }
+.fix p { margin: 0; }
+.rule { color: var(--muted); font-size: .82rem; margin: 10px 0 0; }
+
+.clean { text-align: center; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 40px 16px; }
+.tick { width: 56px; height: 56px; border-radius: 50%; background: var(--good-bg); color: var(--good); font-size: 28px; line-height: 56px; margin: 0 auto 12px; }
+.foot { color: var(--muted); font-size: .82rem; padding: 24px 0 40px; border-top: 1px solid var(--border); margin-top: 32px; }
+
+@media (max-width: 640px) {
+  h1 { font-size: 1.3rem; }
+  .summary { grid-template-columns: repeat(3, 1fr); }
+  .card.total { grid-column: 1 / -1; }
+  .card { padding: 12px; }
+  .card .num { font-size: 1.6rem; }
+  .finding summary { flex-wrap: wrap; gap: 8px; }
+  .chev { display: none; }
+  .toolbar { position: static; } /* 3 rows of sticky controls would eat the screen */
+}
+@media (prefers-reduced-motion: reduce) { .chev { transition: none; } .chip:active, .link:active { transform: none; } }
+@media (forced-colors: active) { .ln.hit { outline: 1px solid CanvasText; outline-offset: -1px; } }
+@media print { .toolbar, .status { display: none; } .finding { break-inside: avoid; } }
+</style>
+</head>
+<body>
+<header class="top">
+  <div class="wrap">
+    <div class="brand"><span class="logo" aria-hidden="true">◆</span> keyguard <span class="ver">v0.1.0</span></div>
+    <h1>Security scan report</h1>
+    <dl class="meta">
+      <div><dt>Project</dt><dd><code>/tmp/keyguard-demo</code></dd></div>
+      <div><dt>Scanned</dt><dd>12 Oct 2026, 14:15 IST</dd></div>
+      <div><dt>Coverage</dt><dd>15 files, history not scanned</dd></div>
+      <div><dt>Duration</dt><dd>12 ms</dd></div>
+    </dl>
+  </div>
+</header>
+
+<main class="wrap">
+  <section class="summary" aria-label="Summary">
+    <div class="card total bad">
+      <span class="num">14</span>
+      <span class="lbl">findings to review</span>
+    </div>
+    <div class="card sev-high"><span class="num">9</span><span class="lbl">High</span></div>
+    <div class="card sev-medium"><span class="num">4</span><span class="lbl">Medium</span></div>
+    <div class="card sev-low"><span class="num">1</span><span class="lbl">Low</span></div>
+  </section>
+
+  
+  <section class="toolbar" id="toolbar" aria-label="Filters" hidden>
+    <div class="chips" role="group" aria-label="Severity">
+      <button type="button" class="chip" data-sev="high" aria-pressed="true">High</button>
+      <button type="button" class="chip" data-sev="medium" aria-pressed="true">Medium</button>
+      <button type="button" class="chip" data-sev="low" aria-pressed="true">Low</button>
+    </div>
+    <label class="field"><span class="sr-only">Rule</span>
+      <select id="rule-filter">
+        <option value="">All rules</option>
+        <option value="aws-access-key-id">aws-access-key-id</option><option value="aws-secret-access-key">aws-secret-access-key</option><option value="database-url-password">database-url-password</option><option value="debug-in-production-config">debug-in-production-config</option><option value="env-file-not-ignored">env-file-not-ignored</option><option value="github-token">github-token</option><option value="google-api-key">google-api-key</option><option value="high-entropy-string">high-entropy-string</option><option value="openai-api-key">openai-api-key</option><option value="private-key">private-key</option><option value="secret-in-public-env-var">secret-in-public-env-var</option><option value="stripe-live-key">stripe-live-key</option><option value="supabase-admin-key-in-client">supabase-admin-key-in-client</option><option value="supabase-service-role-jwt">supabase-service-role-jwt</option>
+      </select>
+    </label>
+    <label class="field grow"><span class="sr-only">Search files and descriptions</span>
+      <input id="search" type="search" placeholder="Search file or description…" autocomplete="off">
+    </label>
+    <button type="button" class="link" id="toggle-all">Expand all</button>
+  </section>
+  <p class="status" id="status" role="status" aria-live="polite"></p>
+  <p class="empty-filter" id="empty-filter" hidden>No findings match these filters.</p>
+
+  
+  <section class="group" data-group="code">
+    <h2>Secrets in code <span class="count">10</span></h2>
+    <p class="blurb">Credentials hardcoded in files that will be committed or deployed.</p>
+    <div class="list">
+    
+      <details class="finding" data-sev="high" data-rule="openai-api-key" data-text=".env.example openai api key">
+        <summary>
+          <span class="badge high">HIGH</span>
+          <span class="what">
+            <span class="desc">OpenAI API key</span>
+            <span class="where"><code>.env.example:2</code> <code class="secret" title="Redacted">sk-p****</code></span>
+          </span>
+          <span class="chev" aria-hidden="true"></span>
+        </summary>
+        <div class="body">
+          
+          
+          <pre class="code" tabindex="0" role="group" aria-label="Code around the finding (secrets redacted)"><span class="ln"><span class="n">1</span># Copy to .env.local and fill in</span><span class="ln hit"><span class="n">2</span><span class="sr-only">Flagged line: </span>OPENAI_API_KEY=sk-p****</span></pre>
+          
+          <div class="fix"><h3>How to fix</h3><p>Revoke/rotate this key in the provider&#39;s dashboard first (assume it is compromised), then load it from a server-side environment variable.</p></div>
+          <p class="rule">Rule <code>openai-api-key</code> · column 16</p>
+        </div>
+      </details>
+    
+      <details class="finding" data-sev="high" data-rule="aws-access-key-id" data-text="config/aws.js aws access key id">
+        <summary>
+          <span class="badge high">HIGH</span>
+          <span class="what">
+            <span class="desc">AWS access key ID</span>
+            <span class="where"><code>config/aws.js:3</code> <code class="secret" title="Redacted">AKIA****</code></span>
+          </span>
+          <span class="chev" aria-hidden="true"></span>
+        </summary>
+        <div class="body">
+          
+          
+          <pre class="code" tabindex="0" role="group" aria-label="Code around the finding (secrets redacted)"><span class="ln"><span class="n">1</span>module.exports = {</span><span class="ln"><span class="n">2</span>  region: &#34;us-east-1&#34;,</span><span class="ln hit"><span class="n">3</span><span class="sr-only">Flagged line: </span>  accessKeyId: &#34;AKIA****&#34;,</span><span class="ln"><span class="n">4</span>  aws_secret_access_key: &#34;Lrgo****&#34;,</span><span class="ln"><span class="n">5</span>};</span></pre>
+          
+          <div class="fix"><h3>How to fix</h3><p>Revoke/rotate this key in the provider&#39;s dashboard first (assume it is compromised), then load it from a server-side environment variable. Prefer IAM roles or short-lived credentials over long-lived keys.</p></div>
+          <p class="rule">Rule <code>aws-access-key-id</code> · column 17</p>
+        </div>
+      </details>
+    
+      <details class="finding" data-sev="high" data-rule="aws-secret-access-key" data-text="config/aws.js aws secret access key">
+        <summary>
+          <span class="badge high">HIGH</span>
+          <span class="what">
+            <span class="desc">AWS secret access key</span>
+            <span class="where"><code>config/aws.js:4</code> <code class="secret" title="Redacted">Lrgo****</code></span>
+          </span>
+          <span class="chev" aria-hidden="true"></span>
+        </summary>
+        <div class="body">
+          
+          
+          <pre class="code" tabindex="0" role="group" aria-label="Code around the finding (secrets redacted)"><span class="ln"><span class="n">1</span>module.exports = {</span><span class="ln"><span class="n">2</span>  region: &#34;us-east-1&#34;,</span><span class="ln"><span class="n">3</span>  accessKeyId: &#34;AKIA****&#34;,</span><span class="ln hit"><span class="n">4</span><span class="sr-only">Flagged line: </span>  aws_secret_access_key: &#34;Lrgo****&#34;,</span><span class="ln"><span class="n">5</span>};</span></pre>
+          
+          <div class="fix"><h3>How to fix</h3><p>Revoke/rotate this key in the provider&#39;s dashboard first (assume it is compromised), then load it from a server-side environment variable.</p></div>
+          <p class="rule">Rule <code>aws-secret-access-key</code> · column 27</p>
+        </div>
+      </details>
+    
+      <details class="finding" data-sev="high" data-rule="private-key" data-text="keys/id_rsa private key">
+        <summary>
+          <span class="badge high">HIGH</span>
+          <span class="what">
+            <span class="desc">Private key</span>
+            <span class="where"><code>keys/id_rsa:1</code> <code class="secret" title="Redacted">----****</code></span>
+          </span>
+          <span class="chev" aria-hidden="true"></span>
+        </summary>
+        <div class="body">
+          
+          
+          <pre class="code" tabindex="0" role="group" aria-label="Code around the finding (secrets redacted)"><span class="ln hit"><span class="n">1</span><span class="sr-only">Flagged line: </span>----****</span><span class="ln"><span class="n">2</span>[redacted private key]</span><span class="ln"><span class="n">3</span>[redacted private key]</span><span class="ln"><span class="n">4</span>[redacted private key]</span></pre>
+          
+          <div class="fix"><h3>How to fix</h3><p>Delete the key file from the repo, generate a new key pair, and revoke the old public key wherever it is trusted.</p></div>
+          <p class="rule">Rule <code>private-key</code> · column 1</p>
+        </div>
+      </details>
+    
+      <details class="finding" data-sev="high" data-rule="database-url-password" data-text="scripts/deploy.sh password in database connection string">
+        <summary>
+          <span class="badge high">HIGH</span>
+          <span class="what">
+            <span class="desc">Password in database connection string</span>
+            <span class="where"><code>scripts/deploy.sh:2</code> <code class="secret" title="Redacted">uCQp****</code></span>
+          </span>
+          <span class="chev" aria-hidden="true"></span>
+        </summary>
+        <div class="body">
+          
+          
+          <pre class="code" tabindex="0" role="group" aria-label="Code around the finding (secrets redacted)"><span class="ln"><span class="n">1</span>#!/bin/sh</span><span class="ln hit"><span class="n">2</span><span class="sr-only">Flagged line: </span>export DATABASE_URL=&#34;postgres://admin:uCQp****@db.internal:5432/app&#34;</span><span class="ln"><span class="n">3</span>npm run migrate</span></pre>
+          
+          <div class="fix"><h3>How to fix</h3><p>Change the database password, then read the full URL from an environment variable (DATABASE_URL).</p></div>
+          <p class="rule">Rule <code>database-url-password</code> · column 39</p>
+        </div>
+      </details>
+    
+      <details class="finding" data-sev="high" data-rule="github-token" data-text="src/lib/github.ts github token">
+        <summary>
+          <span class="badge high">HIGH</span>
+          <span class="what">
+            <span class="desc">GitHub token</span>
+            <span class="where"><code>src/lib/github.ts:1</code> <code class="secret" title="Redacted">ghp_****</code></span>
+          </span>
+          <span class="chev" aria-hidden="true"></span>
+        </summary>
+        <div class="body">
+          
+          
+          <pre class="code" tabindex="0" role="group" aria-label="Code around the finding (secrets redacted)"><span class="ln hit"><span class="n">1</span><span class="sr-only">Flagged line: </span>const octokit = new Octokit({ auth: &#34;ghp_****&#34; });</span></pre>
+          
+          <div class="fix"><h3>How to fix</h3><p>Revoke it at github.com/settings/tokens, then use a fine-grained token stored in your CI secrets.</p></div>
+          <p class="rule">Rule <code>github-token</code> · column 38</p>
+        </div>
+      </details>
+    
+      <details class="finding" data-sev="high" data-rule="stripe-live-key" data-text="src/lib/stripe.ts stripe live secret/restricted key">
+        <summary>
+          <span class="badge high">HIGH</span>
+          <span class="what">
+            <span class="desc">Stripe live secret/restricted key</span>
+            <span class="where"><code>src/lib/stripe.ts:4</code> <code class="secret" title="Redacted">sk_l****</code></span>
+          </span>
+          <span class="chev" aria-hidden="true"></span>
+        </summary>
+        <div class="body">
+          
+          
+          <pre class="code" tabindex="0" role="group" aria-label="Code around the finding (secrets redacted)"><span class="ln"><span class="n">1</span>import Stripe from &#34;stripe&#34;;</span><span class="ln"><span class="n">2</span></span><span class="ln"><span class="n">3</span>// TODO: move to env before launch</span><span class="ln hit"><span class="n">4</span><span class="sr-only">Flagged line: </span>export const stripe = new Stripe(&#34;sk_l****&#34;);</span></pre>
+          
+          <div class="fix"><h3>How to fix</h3><p>Roll the key in the Stripe dashboard (Developers → API keys). It can move real money.</p></div>
+          <p class="rule">Rule <code>stripe-live-key</code> · column 35</p>
+        </div>
+      </details>
+    
+      <details class="finding" data-sev="high" data-rule="supabase-service-role-jwt" data-text="src/lib/supabase-admin.ts supabase service_role jwt">
+        <summary>
+          <span class="badge high">HIGH</span>
+          <span class="what">
+            <span class="desc">Supabase service_role JWT</span>
+            <span class="where"><code>src/lib/supabase-admin.ts:2</code> <code class="secret" title="Redacted">eyJh****</code></span>
+          </span>
+          <span class="chev" aria-hidden="true"></span>
+        </summary>
+        <div class="body">
+          
+          
+          <pre class="code" tabindex="0" role="group" aria-label="Code around the finding (secrets redacted)"><span class="ln"><span class="n">1</span>export const SERVICE_KEY =</span><span class="ln hit"><span class="n">2</span><span class="sr-only">Flagged line: </span>  &#34;eyJh****&#34;;</span></pre>
+          
+          <div class="fix"><h3>How to fix</h3><p>service_role bypasses Row Level Security — anyone holding it owns your database. Rotate the JWT secret in Supabase and keep this key server-side only.</p></div>
+          <p class="rule">Rule <code>supabase-service-role-jwt</code> · column 4</p>
+        </div>
+      </details>
+    
+      <details class="finding" data-sev="medium" data-rule="google-api-key" data-text="src/firebase.ts google api key">
+        <summary>
+          <span class="badge medium">MEDIUM</span>
+          <span class="what">
+            <span class="desc">Google API key</span>
+            <span class="where"><code>src/firebase.ts:2</code> <code class="secret" title="Redacted">AIza****</code></span>
+          </span>
+          <span class="chev" aria-hidden="true"></span>
+        </summary>
+        <div class="body">
+          
+          
+          <pre class="code" tabindex="0" role="group" aria-label="Code around the finding (secrets redacted)"><span class="ln"><span class="n">1</span>export const firebaseConfig = {</span><span class="ln hit"><span class="n">2</span><span class="sr-only">Flagged line: </span>  apiKey: &#34;AIza****&#34;,</span><span class="ln"><span class="n">3</span>  projectId: &#34;demo-app&#34;,</span><span class="ln"><span class="n">4</span>};</span></pre>
+          
+          <div class="fix"><h3>How to fix</h3><p>Firebase web keys are designed to be public, but only if restricted. Add HTTP-referrer and API restrictions in Google Cloud Console; rotate it if it&#39;s a server key.</p></div>
+          <p class="rule">Rule <code>google-api-key</code> · column 12</p>
+        </div>
+      </details>
+    
+      <details class="finding" data-sev="medium" data-rule="high-entropy-string" data-text="src/utils/webhook.js high-entropy string (possible secret)">
+        <summary>
+          <span class="badge medium">MEDIUM</span>
+          <span class="what">
+            <span class="desc">High-entropy string (possible secret)</span>
+            <span class="where"><code>src/utils/webhook.js:1</code> <code class="secret" title="Redacted">KO90****</code></span>
+          </span>
+          <span class="chev" aria-hidden="true"></span>
+        </summary>
+        <div class="body">
+          
+          
+          <pre class="code" tabindex="0" role="group" aria-label="Code around the finding (secrets redacted)"><span class="ln hit"><span class="n">1</span><span class="sr-only">Flagged line: </span>const cfg = { endpoint: &#34;/hooks/deploy&#34;, signing: &#34;KO90****&#34; };</span><span class="ln"><span class="n">2</span>export default cfg;</span></pre>
+          
+          <div class="fix"><h3>How to fix</h3><p>If this is a credential, move it to an environment variable. If it&#39;s not, add a `keyguard:ignore` comment on the line.</p></div>
+          <p class="rule">Rule <code>high-entropy-string</code> · column 52</p>
+        </div>
+      </details>
+    
+    </div>
+  </section>
+  
+  <section class="group" data-group="config">
+    <h2>Risky configuration <span class="count">4</span></h2>
+    <p class="blurb">Setups that leak secrets even when the code itself looks clean.</p>
+    <div class="list">
+    
+      <details class="finding" data-sev="high" data-rule="secret-in-public-env-var" data-text=".env.local secret-looking variable uses a browser-exposed prefix">
+        <summary>
+          <span class="badge high">HIGH</span>
+          <span class="what">
+            <span class="desc">Secret-looking variable uses a browser-exposed prefix</span>
+            <span class="where"><code>.env.local:2</code> <code class="secret" title="Redacted">NEXT_PUBLIC_STRIPE_SECRET_KEY</code></span>
+          </span>
+          <span class="chev" aria-hidden="true"></span>
+        </summary>
+        <div class="body">
+          
+          
+          <div class="fix"><h3>How to fix</h3><p>Variables with NEXT_PUBLIC_/VITE_/REACT_APP_/EXPO_PUBLIC_ prefixes are baked into the JavaScript bundle that every visitor downloads. Drop the prefix, read it only on the server, and rotate the value.</p></div>
+          <p class="rule">Rule <code>secret-in-public-env-var</code> · column 1</p>
+        </div>
+      </details>
+    
+      <details class="finding" data-sev="medium" data-rule="env-file-not-ignored" data-text=".env.local environment file is not covered by .gitignore (not a git repo yet)">
+        <summary>
+          <span class="badge medium">MEDIUM</span>
+          <span class="what">
+            <span class="desc">Environment file is not covered by .gitignore (not a git repo yet)</span>
+            <span class="where"><code>.env.local</code></span>
+          </span>
+          <span class="chev" aria-hidden="true"></span>
+        </summary>
+        <div class="body">
+          
+          
+          <div class="fix"><h3>How to fix</h3><p>Add `.env*` and `!.env.example` to .gitignore before running `git init`/`git add`.</p></div>
+          <p class="rule">Rule <code>env-file-not-ignored</code></p>
+        </div>
+      </details>
+    
+      <details class="finding" data-sev="medium" data-rule="supabase-admin-key-in-client" data-text="app/dashboard/page.tsx supabase admin key referenced in client-side code">
+        <summary>
+          <span class="badge medium">MEDIUM</span>
+          <span class="what">
+            <span class="desc">Supabase admin key referenced in client-side code</span>
+            <span class="where"><code>app/dashboard/page.tsx:5</code> <code class="secret" title="Redacted">SUPABASE_SERVICE_ROLE_KEY</code></span>
+          </span>
+          <span class="chev" aria-hidden="true"></span>
+        </summary>
+        <div class="body">
+          
+          
+          <pre class="code" tabindex="0" role="group" aria-label="Code around the finding (secrets redacted)"><span class="ln"><span class="n">2</span></span><span class="ln"><span class="n">3</span>import { createClient } from &#34;@supabase/supabase-js&#34;;</span><span class="ln"><span class="n">4</span></span><span class="ln hit"><span class="n">5</span><span class="sr-only">Flagged line: </span>const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!);</span></pre>
+          
+          <div class="fix"><h3>How to fix</h3><p>Admin keys must never reach the browser. Move this call into a server route/action (route.ts, a Server Action, or an Edge Function) and use the anon/publishable key in client code.</p></div>
+          <p class="rule">Rule <code>supabase-admin-key-in-client</code> · column 82</p>
+        </div>
+      </details>
+    
+      <details class="finding" data-sev="low" data-rule="debug-in-production-config" data-text="config/production.json debug mode enabled in a production config file">
+        <summary>
+          <span class="badge low">LOW</span>
+          <span class="what">
+            <span class="desc">Debug mode enabled in a production config file</span>
+            <span class="where"><code>config/production.json:3</code></span>
+          </span>
+          <span class="chev" aria-hidden="true"></span>
+        </summary>
+        <div class="body">
+          
+          
+          <pre class="code" tabindex="0" role="group" aria-label="Code around the finding (secrets redacted)"><span class="ln"><span class="n">1</span>{</span><span class="ln"><span class="n">2</span>  &#34;port&#34;: 8080,</span><span class="ln hit"><span class="n">3</span><span class="sr-only">Flagged line: </span>  &#34;debug&#34;: true</span><span class="ln"><span class="n">4</span>}</span></pre>
+          
+          <div class="fix"><h3>How to fix</h3><p>Debug output can leak stack traces, env values and internal paths. Disable it for production.</p></div>
+          <p class="rule">Rule <code>debug-in-production-config</code></p>
+        </div>
+      </details>
+    
+    </div>
+  </section>
+  
+  
+
+  <footer class="foot">
+    Secret values are redacted in this report. Generated by keyguard v0.1.0. Add <code>// keyguard:ignore</code> on a line to accept a known false positive.
+  </footer>
+</main>
+<script>// Filtering for the keyguard HTML report. The page is fully readable without
+// JavaScript; this only hides and shows findings that are already rendered.
+(function () {
+  "use strict";
+  var findings = Array.prototype.slice.call(document.querySelectorAll(".finding"));
+  if (!findings.length) return;
+
+  var chips = Array.prototype.slice.call(document.querySelectorAll(".chip"));
+  var rule = document.getElementById("rule-filter");
+  var search = document.getElementById("search");
+  var status = document.getElementById("status");
+  var emptyMsg = document.getElementById("empty-filter");
+  var toggle = document.getElementById("toggle-all");
+  // The toolbar ships hidden so no-JS viewers don't see controls that do nothing.
+  document.getElementById("toolbar").hidden = false;
+
+  function plural(n) { return n === 1 ? " finding" : " findings"; }
+
+  function visible() { return findings.filter(function (f) { return !f.hidden; }); }
+
+  // Label reflects what the button will do next, even after manual expand/collapse.
+  function syncToggle() {
+    var v = visible();
+    var allOpen = v.length > 0 && v.every(function (f) { return f.open; });
+    toggle.textContent = allOpen ? "Collapse all" : "Expand all";
+    toggle.disabled = v.length === 0;
+  }
+
+  function apply() {
+    var sevs = {};
+    chips.forEach(function (c) { sevs[c.dataset.sev] = c.getAttribute("aria-pressed") === "true"; });
+    var r = rule.value;
+    var q = search.value.trim().toLowerCase();
+    var shown = 0;
+    findings.forEach(function (f) {
+      var ok = sevs[f.dataset.sev] && (!r || f.dataset.rule === r) && (!q || f.dataset.text.indexOf(q) !== -1);
+      f.hidden = !ok;
+      if (ok) shown++;
+    });
+    document.querySelectorAll(".group").forEach(function (g) {
+      g.hidden = !g.querySelector(".finding:not([hidden])");
+    });
+    emptyMsg.hidden = shown !== 0;
+    status.textContent = shown === findings.length
+      ? "Showing all " + shown + plural(shown)
+      : "Showing " + shown + " of " + findings.length + plural(findings.length);
+    syncToggle();
+  }
+
+  chips.forEach(function (c) {
+    c.addEventListener("click", function () {
+      c.setAttribute("aria-pressed", c.getAttribute("aria-pressed") === "true" ? "false" : "true");
+      apply();
+    });
+  });
+  rule.addEventListener("change", apply);
+  search.addEventListener("input", apply);
+
+  toggle.addEventListener("click", function () {
+    var open = toggle.textContent === "Expand all";
+    visible().forEach(function (f) { f.open = open; });
+    syncToggle();
+  });
+  // "toggle" fires asynchronously and doesn't bubble, so listen per finding.
+  findings.forEach(function (f) { f.addEventListener("toggle", syncToggle); });
+
+  // Open the first high-severity finding so the most urgent fix is visible immediately.
+  var first = document.querySelector('.finding[data-sev="high"]');
+  if (first) first.open = true;
+  apply();
+})();
+</script>
+</body>
+</html>

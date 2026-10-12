@@ -1,0 +1,32 @@
+# Example: block a deploy when keyguard finds a secret, and show findings
+# in the repo's Security tab. Copy to .github/workflows/keyguard.yml in your app.
+name: keyguard
+on: [push, pull_request]
+
+permissions:
+  contents: read
+  security-events: write # needed to upload SARIF
+
+jobs:
+  scan:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # full history, so --history can see old commits
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.27"
+
+      # Replace with your published module path once it's on GitHub.
+      - run: go install github.com/YOUR_GITHUB_USER/keyguard/cmd/keyguard@latest
+
+      - name: Scan
+        run: keyguard scan . --history --format sarif -o keyguard.sarif
+
+      - name: Upload to GitHub code scanning
+        if: always() # upload even when the scan step failed the build
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: keyguard.sarif

@@ -1,0 +1,6 @@
+# Test data deliberately contains (fake, runtime-built) secrets.
+*_test.go
+internal/fixture/
+# Docs and the sample report describe the fake findings by name.
+docs/
+README.md
