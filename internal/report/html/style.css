@@ -98,6 +98,12 @@ h1 { margin: 6px 0 16px; font-size: 1.6rem; letter-spacing: -.01em; }
 .fix p { margin: 0; }
 .rule { color: var(--muted); font-size: .82rem; margin: 10px 0 0; }
 
+.skipped { background: var(--medium-bg); border: 1px solid var(--medium); border-radius: var(--radius); padding: 14px 16px; margin: 0 0 24px; }
+.skipped h2 { font-size: 1rem; margin: 0 0 4px; color: var(--medium); }
+.skipped p { margin: 0 0 8px; font-size: .92rem; }
+.skipped ul { margin: 0; padding-left: 20px; font-size: .9rem; }
+.skipped li { overflow-wrap: anywhere; }
+.skipped li span { color: var(--muted); }
 .clean { text-align: center; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 40px 16px; }
 .tick { width: 56px; height: 56px; border-radius: 50%; background: var(--good-bg); color: var(--good); font-size: 28px; line-height: 56px; margin: 0 auto 12px; }
 .foot { color: var(--muted); font-size: .82rem; padding: 24px 0 40px; border-top: 1px solid var(--border); margin-top: 32px; }

@@ -105,6 +105,12 @@ h1 { margin: 6px 0 16px; font-size: 1.6rem; letter-spacing: -.01em; }
 .fix p { margin: 0; }
 .rule { color: var(--muted); font-size: .82rem; margin: 10px 0 0; }
 
+.skipped { background: var(--medium-bg); border: 1px solid var(--medium); border-radius: var(--radius); padding: 14px 16px; margin: 0 0 24px; }
+.skipped h2 { font-size: 1rem; margin: 0 0 4px; color: var(--medium); }
+.skipped p { margin: 0 0 8px; font-size: .92rem; }
+.skipped ul { margin: 0; padding-left: 20px; font-size: .9rem; }
+.skipped li { overflow-wrap: anywhere; }
+.skipped li span { color: var(--muted); }
 .clean { text-align: center; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 40px 16px; }
 .tick { width: 56px; height: 56px; border-radius: 50%; background: var(--good-bg); color: var(--good); font-size: 28px; line-height: 56px; margin: 0 auto 12px; }
 .foot { color: var(--muted); font-size: .82rem; padding: 24px 0 40px; border-top: 1px solid var(--border); margin-top: 32px; }
@@ -131,9 +137,9 @@ h1 { margin: 6px 0 16px; font-size: 1.6rem; letter-spacing: -.01em; }
     <h1>Security scan report</h1>
     <dl class="meta">
       <div><dt>Project</dt><dd><code>/tmp/keyguard-demo</code></dd></div>
-      <div><dt>Scanned</dt><dd>12 Oct 2026, 14:15 IST</dd></div>
+      <div><dt>Scanned</dt><dd>12 Oct 2026, 15:29 IST</dd></div>
       <div><dt>Coverage</dt><dd>15 files, history not scanned</dd></div>
-      <div><dt>Duration</dt><dd>12 ms</dd></div>
+      <div><dt>Duration</dt><dd>21 ms</dd></div>
     </dl>
   </div>
 </header>
@@ -148,6 +154,8 @@ h1 { margin: 6px 0 16px; font-size: 1.6rem; letter-spacing: -.01em; }
     <div class="card sev-medium"><span class="num">4</span><span class="lbl">Medium</span></div>
     <div class="card sev-low"><span class="num">1</span><span class="lbl">Low</span></div>
   </section>
+
+  
 
   
   <section class="toolbar" id="toolbar" aria-label="Filters" hidden>

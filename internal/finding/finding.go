@@ -76,6 +76,19 @@ type ContextLine struct {
 	Hit    bool   `json:"hit,omitempty"`
 }
 
+// Skip records a path the scanner could not inspect. Files skipped on purpose
+// (lockfiles, images, node_modules) are not recorded; these are the ones a
+// user would assume were checked.
+type Skip struct {
+	Path   string `json:"path"`
+	Reason string `json:"reason"` // SkipUnreadable or SkipTooLarge
+}
+
+const (
+	SkipUnreadable = "unreadable"
+	SkipTooLarge   = "too-large"
+)
+
 // Commit identifies where in git history a secret was introduced.
 type Commit struct {
 	SHA    string `json:"sha"`

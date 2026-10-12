@@ -10,6 +10,7 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"sort"
 	"strings"
 	"sync"
 	"time"
@@ -33,14 +34,18 @@ type Options struct {
 type Result struct {
 	Findings     []finding.Finding
 	FilesScanned int
-	Duration     time.Duration
+	// Skipped lists paths that could not be scanned (permission denied,
+	// I/O error, over MaxFileSize). "No findings" says nothing about them.
+	Skipped  []finding.Skip
+	Duration time.Duration
 }
 
 type fileResult struct {
 	rel      string
 	findings []finding.Finding
 	scanned  bool
-	env      bool // a dotenv file: checked for git exposure once the walk is done
+	env      bool   // a dotenv file: checked for git exposure once the walk is done
+	skip     string // non-empty: the file could not be scanned, and why
 }
 
 // Dir scans every file under opts.Root.
@@ -73,20 +78,33 @@ func Dir(ctx context.Context, opts Options) (*Result, error) {
 		go func() {
 			defer wg.Done()
 			for rel := range paths {
-				found, ok := scanFile(det, opts, rel)
-				results <- fileResult{rel: rel, findings: found, scanned: ok, env: pathpolicy.IsEnvFile(rel)}
+				found, ok, skip := scanFile(det, opts, rel)
+				results <- fileResult{rel: rel, findings: found, scanned: ok, env: pathpolicy.IsEnvFile(rel), skip: skip}
 			}
 		}()
 	}
 
+	// The walker counts in wg too: it reports unreadable directories on
+	// results, so results must stay open until it has finished.
+	wg.Add(1)
 	go func() {
+		defer wg.Done()
 		defer close(paths)
 		walkErr <- filepath.WalkDir(opts.Root, func(p string, d fs.DirEntry, err error) error {
-			if err != nil {
-				return nil // unreadable entry: skip it, keep walking
-			}
 			rel, _ := filepath.Rel(opts.Root, p)
 			rel = filepath.ToSlash(rel)
+			if err != nil {
+				if rel == "." {
+					return err // the root itself is unreadable: nothing was scanned
+				}
+				// Record it and keep walking; one locked folder shouldn't abort the scan.
+				select {
+				case results <- fileResult{rel: rel, skip: finding.SkipUnreadable}:
+				case <-ctx.Done():
+					return ctx.Err()
+				}
+				return nil
+			}
 			if rel == "." {
 				return nil
 			}
@@ -120,7 +138,11 @@ func Dir(ctx context.Context, opts Options) (*Result, error) {
 		if r.env {
 			envFiles = append(envFiles, r.rel)
 		}
+		if r.skip != "" {
+			res.Skipped = append(res.Skipped, finding.Skip{Path: r.rel, Reason: r.skip})
+		}
 	}
+	sort.Slice(res.Skipped, func(i, j int) bool { return res.Skipped[i].Path < res.Skipped[j].Path })
 	if err := <-walkErr; err != nil {
 		return nil, err
 	}
@@ -134,26 +156,34 @@ func Dir(ctx context.Context, opts Options) (*Result, error) {
 	return res, nil
 }
 
-func scanFile(det *detect.Detector, opts Options, rel string) ([]finding.Finding, bool) {
+// scanFile returns the file's findings, whether it was scanned, and if it
+// couldn't be, a finding.Skip* reason. Deliberate skips return reason "".
+func scanFile(det *detect.Detector, opts Options, rel string) ([]finding.Finding, bool, string) {
 	if pathpolicy.Skippable(rel) {
-		return nil, false
+		return nil, false, ""
 	}
 	full := filepath.Join(opts.Root, filepath.FromSlash(rel))
 	info, err := os.Stat(full)
-	if err != nil || info.Size() > opts.MaxFileSize {
-		return nil, false
+	if err != nil {
+		return nil, false, finding.SkipUnreadable
+	}
+	if info.Size() > opts.MaxFileSize {
+		return nil, false, finding.SkipTooLarge
 	}
 	data, err := os.ReadFile(full)
-	if err != nil || isBinary(data) {
-		return nil, false
+	if err != nil {
+		return nil, false, finding.SkipUnreadable
+	}
+	if isBinary(data) {
+		return nil, false, ""
 	}
 	// A real .env file is SUPPOSED to hold secrets; the risk is it being
 	// committed or exposed, which envExposure handles. Here we only
 	// look at variable names and never touch the values.
 	if pathpolicy.IsEnvFile(rel) {
-		return checks.EnvFile(rel, data), true
+		return checks.EnvFile(rel, data), true, ""
 	}
-	return Content(det, rel, data, opts.Context, checks.IsClientFile(rel, head(data))), true
+	return Content(det, rel, data, opts.Context, checks.IsClientFile(rel, head(data))), true, ""
 }
 
 // maxFindingsPerFile stops one generated file (thousands of random strings)

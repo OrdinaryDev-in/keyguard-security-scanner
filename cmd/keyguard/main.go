@@ -97,6 +97,7 @@ type scanFlags struct {
 	noColor    *bool
 	workers    *int
 	context    *int
+	maxSize    *int
 }
 
 func newScanFlags(out io.Writer) *scanFlags {
@@ -114,6 +115,7 @@ func newScanFlags(out io.Writer) *scanFlags {
 		noColor:    fs.Bool("no-color", false, "disable colored output (also honours NO_COLOR)"),
 		workers:    fs.Int("workers", 0, "parallel file workers (0 = number of CPUs)"),
 		context:    fs.Int("context", 3, "lines of code context to include around each finding"),
+		maxSize:    fs.Int("max-size", 2, "skip (and report) files larger than this many MiB"),
 	}
 }
 
@@ -151,6 +153,10 @@ func runScan(args []string, stdout, stderr io.Writer) int {
 	if !*f.history && (*f.maxCommits != 0 || *f.since != "") {
 		fmt.Fprintln(stderr, "keyguard: warning: --max-commits/--since only apply with --history")
 	}
+	if *f.maxSize < 1 {
+		fmt.Fprintln(stderr, "keyguard: --max-size must be at least 1 (MiB)")
+		return exitError
+	}
 	failOn, err := finding.ParseSeverity(*f.failOn)
 	if err != nil {
 		fmt.Fprintln(stderr, "keyguard:", err)
@@ -172,6 +178,7 @@ func runScan(args []string, stdout, stderr io.Writer) int {
 	start := time.Now()
 	res, err := scan.Dir(ctx, scan.Options{
 		Root: root, Workers: *f.workers, Entropy: !*f.noEntropy, Context: *f.context,
+		MaxFileSize: int64(*f.maxSize) << 20,
 	})
 	if err != nil {
 		fmt.Fprintln(stderr, "keyguard:", err)
@@ -180,6 +187,7 @@ func runScan(args []string, stdout, stderr io.Writer) int {
 	rep := &report.Report{
 		Tool: "keyguard", Version: version, Root: abs, ScannedAt: start,
 		FilesScanned: res.FilesScanned, Findings: res.Findings, History: *f.history,
+		Skipped: res.Skipped, MaxFileSize: int64(*f.maxSize) << 20,
 	}
 
 	if *f.history {

@@ -44,6 +44,7 @@ func TestExitCodes(t *testing.T) {
 		{"bad severity", []string{"scan", clean, "--fail-on", "urgent"}, exitError},
 		{"missing dir", []string{"scan", filepath.Join(clean, "nope")}, exitError},
 		{"bad format", []string{"scan", clean, "--format", "xml"}, exitError},
+		{"bad max-size", []string{"scan", clean, "--max-size", "0"}, exitError},
 		{"unknown command", []string{"deploy"}, exitError},
 		{"version", []string{"version"}, exitClean},
 	}

@@ -1,5 +1,7 @@
 # keyguard
 
+[![CI](https://github.com/OrdinaryDev-in/keyguard-security-scanner/actions/workflows/ci.yml/badge.svg)](https://github.com/OrdinaryDev-in/keyguard-security-scanner/actions/workflows/ci.yml) [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+
 **Find leaked API keys, secrets and risky config in your app before you deploy it.**
 A single Go binary with zero dependencies. It scans your files *and* your git history, and produces a terminal summary, JSON, SARIF for GitHub code scanning, or a self-contained HTML report.
 
@@ -44,6 +46,12 @@ Exit code `1` when anything at or above `--fail-on` (default `high`) is found, s
 
 Run `keyguard rules` for the full list.
 
+## Requirements
+
+- **Go 1.21+** to install or build. The module targets Go 1.27; older 1.21+ toolchains download it automatically on first build.
+- **git**: needed for `--history` and for checking whether `.env` files are ignored or committed. Without it, the file scan still works.
+- **make** is optional, for the shortcuts below. On Windows, use `go build ./cmd/keyguard` and `go test ./...` directly.
+
 ## Install
 
 ```bash
@@ -73,6 +81,7 @@ keyguard scan . --no-entropy                   # fewer false positives
 | `--history` | off | scan git history |
 | `--max-commits`, `--since` | all | limit history (`--since "6 months ago"`) |
 | `--context` | `3` | lines of code shown around findings |
+| `--max-size` | `2` | skip files larger than this many MiB (they're listed as not scanned) |
 | `--no-entropy`, `--no-color`, `--workers` | | |
 
 ### HTML report
@@ -93,6 +102,7 @@ See [`docs/github-action.yml`](docs/github-action.yml): it fails the build on a 
 - Secrets are **never printed in full**, in any format: `sk_live_abc…` becomes `sk_l****`, and short values become `****`. That includes the code-context lines and private-key bodies.
 - `.env` files are never content-scanned. Only variable **names** are checked.
 - No network calls, no telemetry.
+- **No silent gaps.** Files it couldn't read (permission denied) or that exceed `--max-size` are listed in every output format, and a clean result then says "in what was scanned" instead of a plain ✔.
 
 ## How it works
 
@@ -128,4 +138,4 @@ Use them for production. They have hundreds of rules, and trufflehog verifies ke
 
 ## License
 
-MIT
+[MIT](LICENSE)

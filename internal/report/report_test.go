@@ -141,7 +141,7 @@ func TestSARIFFingerprintsUnique(t *testing.T) {
 	var log sarifLog
 	json.Unmarshal(buf.Bytes(), &log)
 	r := log.Runs[0].Results
-	if r[0].PartialFingerprints["github.com/OrdinaryDev-in/keyguard-security-scanner/v1"] == r[1].PartialFingerprints["github.com/OrdinaryDev-in/keyguard-security-scanner/v1"] {
+	if r[0].PartialFingerprints["keyguard/v1"] == r[1].PartialFingerprints["keyguard/v1"] {
 		t.Error("distinct config findings share a fingerprint")
 	}
 }
@@ -153,5 +153,53 @@ func TestTextStripsControlChars(t *testing.T) {
 	Text(&buf, r, false)
 	if strings.Contains(buf.String(), "\x1b") || strings.Contains(buf.String(), "\r") {
 		t.Errorf("control chars reached the terminal: %q", buf.String())
+	}
+}
+
+func TestSkippedShownInEveryFormat(t *testing.T) {
+	r := &Report{Tool: "keyguard", Version: "test", MaxFileSize: 2 << 20, Skipped: []finding.Skip{
+		{Path: "locked", Reason: finding.SkipUnreadable}, {Path: "big.js", Reason: finding.SkipTooLarge},
+	}}
+	var text, html, js bytes.Buffer
+	Write(&text, r, "text", false)
+	if !strings.Contains(text.String(), "2 paths could not be scanned") ||
+		!strings.Contains(text.String(), "larger than 2 MiB") ||
+		!strings.Contains(text.String(), "found in what was scanned") || strings.Contains(text.String(), "✔") {
+		t.Errorf("text output hides skipped paths:\n%s", text.String())
+	}
+	HTML(&html, r)
+	if !strings.Contains(html.String(), "2 paths could not be scanned") || !strings.Contains(html.String(), "<code>big.js</code>") {
+		t.Error("HTML output missing skipped section")
+	}
+	Write(&js, &Report{}, "json", false)
+	if !strings.Contains(js.String(), `"skipped": []`) {
+		t.Errorf("JSON should always carry a skipped key: %s", js.String())
+	}
+}
+
+func TestTextAlignsAndPluralises(t *testing.T) {
+	r := &Report{Findings: []finding.Finding{
+		{Description: "Short", Severity: finding.High, Source: finding.SourceConfig, File: "a.ts"},
+		{Description: "A much longer description than forty characters", Severity: finding.Low, Source: finding.SourceConfig, File: "b.ts"},
+	}}
+	r.Summary = Summarize(r.Findings)
+	var buf bytes.Buffer
+	Text(&buf, r, false)
+	var cols []int
+	for _, l := range strings.Split(buf.String(), "\n") {
+		if i := strings.Index(l, ".ts"); i > 0 {
+			cols = append(cols, i)
+		}
+	}
+	if len(cols) != 2 || cols[0] != cols[1] {
+		t.Errorf("file column not aligned: %v\n%s", cols, buf.String())
+	}
+
+	one := &Report{Findings: r.Findings[:1]}
+	one.Summary = Summarize(one.Findings)
+	buf.Reset()
+	Text(&buf, one, false)
+	if !strings.Contains(buf.String(), "1 finding:") {
+		t.Errorf("want singular:\n%s", buf.String())
 	}
 }

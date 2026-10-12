@@ -183,3 +183,59 @@ func TestManyHitsBounded(t *testing.T) {
 		t.Errorf("%d findings, want capped", len(fs))
 	}
 }
+
+// A clean result must not hide what wasn't checked: unreadable and oversize
+// paths are reported, deliberate skips (node_modules, images) are not.
+func TestSkippedPathsReported(t *testing.T) {
+	if os.Geteuid() == 0 {
+		t.Skip("root can read everything; permission test is meaningless")
+	}
+	dir := t.TempDir()
+	write := func(rel, s string) {
+		t.Helper()
+		p := filepath.Join(dir, rel)
+		if err := os.MkdirAll(filepath.Dir(p), 0o755); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(p, []byte(s), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	write("ok.js", "console.log(1)\n")
+	write("locked/inner.js", "x\n")
+	write("secret.js", "x\n")
+	write("big.js", strings.Repeat("a", 2048))
+	write("node_modules/pkg/i.js", "x\n")
+	write("logo.png", "x")
+	for _, p := range []string{"locked", "secret.js"} {
+		os.Chmod(filepath.Join(dir, p), 0)
+	}
+	t.Cleanup(func() { os.Chmod(filepath.Join(dir, "locked"), 0o755) }) // so TempDir can be removed
+
+	res, err := Dir(context.Background(), Options{Root: dir, MaxFileSize: 1024})
+	if err != nil {
+		t.Fatal(err)
+	}
+	got := map[string]string{}
+	for _, s := range res.Skipped {
+		got[s.Path] = s.Reason
+	}
+	want := map[string]string{"locked": "unreadable", "secret.js": "unreadable", "big.js": "too-large"}
+	if len(got) != len(want) {
+		t.Fatalf("skipped = %v, want %v", got, want)
+	}
+	for p, r := range want {
+		if got[p] != r {
+			t.Errorf("%s: reason %q, want %q", p, got[p], r)
+		}
+	}
+	if res.FilesScanned != 1 {
+		t.Errorf("FilesScanned = %d, want 1 (ok.js)", res.FilesScanned)
+	}
+}
+
+func TestUnreadableRootIsAnError(t *testing.T) {
+	if _, err := Dir(context.Background(), Options{Root: filepath.Join(t.TempDir(), "missing")}); err == nil {
+		t.Error("want error when the root itself can't be read")
+	}
+}

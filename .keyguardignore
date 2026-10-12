@@ -4,3 +4,5 @@ internal/fixture/
 # Docs and the sample report describe the fake findings by name.
 docs/
 README.md
+# Build output.
+bin/

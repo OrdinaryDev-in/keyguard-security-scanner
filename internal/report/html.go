@@ -17,8 +17,9 @@ import (
 var assets embed.FS
 
 var tmpl = template.Must(template.New("report.tmpl").Funcs(template.FuncMap{
-	"lower": strings.ToLower,
-	"upper": strings.ToUpper,
+	"lower":      strings.ToLower,
+	"skipReason": SkipReason,
+	"upper":      strings.ToUpper,
 	"short": func(s string, n int) string {
 		if len(s) > n {
 			return s[:n]

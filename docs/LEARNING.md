@@ -16,6 +16,7 @@ My first Go project: a secret scanner I can put in front of my own deploys. Buil
 | [08](devlog/08-dogfooding.md) | Dogfooding | The scanner flagged its own tests |
 | [09](devlog/09-security-review.md) | Security review | Scanning an untrusted repo could execute code via git textconv |
 | [10](devlog/10-refactor.md) | Refactor | One embedded rule catalogue, and channels instead of a happens-before proof |
+| [11](devlog/11-no-silent-gaps.md) | No silent gaps | A ✔ that means "I didn't look" is the worst bug a scanner can have |
 
 ## Top 5 lessons
 

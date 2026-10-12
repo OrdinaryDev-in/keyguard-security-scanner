@@ -7,6 +7,7 @@ import (
 	"io"
 	"strings"
 	"time"
+	"unicode/utf8"
 
 	"github.com/OrdinaryDev-in/keyguard-security-scanner/internal/finding"
 )
@@ -22,6 +23,10 @@ type Report struct {
 	History      bool              `json:"history_scanned"`
 	Summary      Summary           `json:"summary"`
 	Findings     []finding.Finding `json:"findings"`
+	// Skipped is always present in JSON (as [] when empty) so a CI script
+	// can rely on the key to check coverage.
+	Skipped     []finding.Skip `json:"skipped"`
+	MaxFileSize int64          `json:"max_file_size_bytes,omitempty"`
 }
 
 type Summary struct {
@@ -51,6 +56,9 @@ func Summarize(fs []finding.Finding) Summary {
 func Write(w io.Writer, r *Report, format string, color bool) error {
 	if r.Findings == nil {
 		r.Findings = []finding.Finding{} // JSON "[]" instead of "null"
+	}
+	if r.Skipped == nil {
+		r.Skipped = []finding.Skip{}
 	}
 	switch format {
 	case "text", "":
@@ -107,13 +115,18 @@ func Text(w io.Writer, r *Report, color bool) error {
 			continue
 		}
 		fmt.Fprintf(w, "\n%s\n", c(bold, fmt.Sprintf("%s (%d)", g.title, len(items))))
+		// Pad descriptions to the longest one in this group so file paths line up.
+		width := 0
+		for _, f := range items {
+			width = max(width, utf8.RuneCountInString(sanitize(f.Description)))
+		}
 		for _, f := range items {
 			loc := f.File
 			if f.Line > 0 {
 				loc = fmt.Sprintf("%s:%d", f.File, f.Line)
 			}
 			sev := fmt.Sprintf("%-6s", strings.ToUpper(f.Severity.String()))
-			fmt.Fprintf(w, "  %s  %-40s %s", c(sevColor[f.Severity], sev), sanitize(f.Description), c(bold, loc))
+			fmt.Fprintf(w, "  %s  %-*s  %s", c(sevColor[f.Severity], sev), width, sanitize(f.Description), c(bold, loc))
 			if f.Secret != "" {
 				fmt.Fprintf(w, "  %s", c(dim, f.Secret))
 			}
@@ -134,15 +147,66 @@ func Text(w io.Writer, r *Report, color bool) error {
 	if r.History {
 		scope += fmt.Sprintf(", %d commits", r.Commits)
 	}
+	writeSkipped(w, r, c)
 	if s.Total() == 0 {
+		if len(r.Skipped) > 0 {
+			fmt.Fprintf(w, "%s No secrets or risky config found in what was scanned (%s, %dms), but %s not checked\n",
+				c(yellow, "!"), scope, r.DurationMS, plural(len(r.Skipped), "path was", "paths were"))
+			return nil
+		}
 		fmt.Fprintf(w, "%s No secrets or risky config found (%s, %dms)\n", c(green, "✔"), scope, r.DurationMS)
 		return nil
 	}
-	fmt.Fprintf(w, "%s %d findings: %s, %s, %s (%s, %dms)\n", c(red, "✖"), s.Total(),
+	noun := "findings"
+	if s.Total() == 1 {
+		noun = "finding"
+	}
+	fmt.Fprintf(w, "%s %d %s: %s, %s, %s (%s, %dms)\n", c(red, "✖"), s.Total(), noun,
 		c(red, fmt.Sprintf("%d high", s.High)), c(yellow, fmt.Sprintf("%d medium", s.Medium)),
 		c(cyan, fmt.Sprintf("%d low", s.Low)), scope, r.DurationMS)
 	fmt.Fprintln(w, c(dim, "Tip: --format html -o report.html for a full report with code context and fixes."))
 	return nil
+}
+
+// maxSkippedShown keeps the warning readable on a repo with many locked files.
+const maxSkippedShown = 5
+
+// writeSkipped warns about paths that were not scanned. A clean result is
+// only meaningful if the user knows what it didn't cover.
+func writeSkipped(w io.Writer, r *Report, c func(code, s string) string) {
+	if len(r.Skipped) == 0 {
+		return
+	}
+	fmt.Fprintf(w, "%s\n", c(yellow, fmt.Sprintf("! %s could not be scanned:", plural(len(r.Skipped), "path", "paths"))))
+	for i, sk := range r.Skipped {
+		if i == maxSkippedShown {
+			fmt.Fprintf(w, "    … and %d more (see --format json)\n", len(r.Skipped)-maxSkippedShown)
+			break
+		}
+		fmt.Fprintf(w, "    %s  %s\n", sanitize(sk.Path), c(dim, SkipReason(sk.Reason, r.MaxFileSize)))
+	}
+	fmt.Fprintln(w)
+}
+
+// SkipReason turns a finding.Skip* reason into words.
+func SkipReason(reason string, maxSize int64) string {
+	switch reason {
+	case finding.SkipTooLarge:
+		if maxSize > 0 {
+			return fmt.Sprintf("larger than %d MiB (raise with --max-size)", maxSize>>20)
+		}
+		return "too large (raise with --max-size)"
+	case finding.SkipUnreadable:
+		return "unreadable (permission denied or I/O error)"
+	}
+	return reason
+}
+
+func plural(n int, one, many string) string {
+	if n == 1 {
+		return "1 " + one
+	}
+	return fmt.Sprintf("%d %s", n, many)
 }
 
 // sanitize strips control characters from untrusted text (file names, git

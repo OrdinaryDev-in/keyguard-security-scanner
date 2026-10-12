@@ -32,6 +32,14 @@
     <div class="card sev-low"><span class="num">{{.Summary.Low}}</span><span class="lbl">Low</span></div>
   </section>
 
+  {{if .Skipped}}
+  <section class="skipped" aria-labelledby="skipped-h">
+    <h2 id="skipped-h">{{len .Skipped}} path{{if ne (len .Skipped) 1}}s{{end}} could not be scanned</h2>
+    <p>These weren't checked, so the results above don't cover them.</p>
+    <ul>{{$max := .MaxFileSize}}{{range .Skipped}}<li><code>{{.Path}}</code> <span>{{skipReason .Reason $max}}</span></li>{{end}}</ul>
+  </section>
+  {{end}}
+
   {{if .Findings}}
   <section class="toolbar" id="toolbar" aria-label="Filters" hidden>
     <div class="chips" role="group" aria-label="Severity">
@@ -88,7 +96,7 @@
   <section class="clean">
     <div class="tick" aria-hidden="true">✓</div>
     <h2>No secrets or risky configuration found</h2>
-    <p>{{if not .History}}Tip: run with <code>--history</code> to also check every past commit.{{else}}Working tree and git history are clean.{{end}}</p>
+    <p>{{if .Skipped}}Only for the files that could be read (see above). {{end}}{{if not .History}}Tip: run with <code>--history</code> to also check every past commit.{{else}}Working tree and git history are clean.{{end}}</p>
   </section>
   {{end}}
 
