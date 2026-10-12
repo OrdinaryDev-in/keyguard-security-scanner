@@ -48,8 +48,12 @@ func TestRules(t *testing.T) {
 		{"generic-secret", `const apiKey = process.env.API_KEY`, false},
 		{"generic-secret", `token: "aaaaaaaaaa"`, false}, // too low entropy
 	}
+	cat, err := Default()
+	if err != nil {
+		t.Fatal(err)
+	}
 	byID := map[string]*Rule{}
-	for _, rule := range Default() {
+	for _, rule := range cat.Patterns {
 		byID[rule.ID] = rule
 	}
 	for _, tt := range tests {
@@ -66,26 +70,72 @@ func TestRules(t *testing.T) {
 	}
 }
 
-func TestRuleIDsUnique(t *testing.T) {
-	seen := map[string]bool{}
-	for _, rule := range Default() {
-		if seen[rule.ID] {
-			t.Errorf("duplicate rule ID %s", rule.ID)
-		}
-		seen[rule.ID] = true
-		if rule.Fix == "" {
-			t.Errorf("rule %s has no fix advice", rule.ID)
-		}
+// IDs that Go code looks up with MustLookup. Keep in sync when adding one.
+var referencedIDs = []string{
+	"high-entropy-string", "secret-in-public-env-var", "supabase-admin-key-in-client",
+	"debug-in-production-config", "env-file-committed", "env-file-not-ignored",
+	"env-file-in-history", "too-many-findings",
+}
+
+func TestReferencedIDsExist(t *testing.T) {
+	for _, id := range referencedIDs {
+		MustLookup(id) // panics (fails the test) if missing
 	}
 }
 
-// Keywords must be lowercase, or the pre-filter silently disables the rule.
-func TestKeywordsLowercase(t *testing.T) {
-	for _, rule := range Default() {
-		for _, k := range rule.Keywords {
-			if k != strings.ToLower(k) {
-				t.Errorf("rule %s keyword %q is not lowercase", rule.ID, k)
+func TestBuiltinLoads(t *testing.T) {
+	cat, err := Default()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(cat.Patterns) != 17 {
+		t.Errorf("want 17 pattern rules (README says so), got %d", len(cat.Patterns))
+	}
+	if len(cat.All()) != len(cat.Patterns)+len(referencedIDs) {
+		t.Errorf("catalogue has %d rules; is a non-pattern rule unused?", len(cat.All()))
+	}
+}
+
+func TestLoadRejects(t *testing.T) {
+	rule := func(fields string) string {
+		return `{"rules": [{"id": "x", "kind": "pattern", "description": "d", "severity": "high", "fix": "f", ` + fields + `}]}`
+	}
+	tests := []struct {
+		name, data, want string
+	}{
+		{"duplicate id", `{"rules": [` +
+			`{"id": "a", "kind": "limit", "description": "d", "severity": "low", "fix": "f"},` +
+			`{"id": "a", "kind": "limit", "description": "d", "severity": "low", "fix": "f"}]}`, "duplicate id"},
+		{"empty fix", `{"rules": [{"id": "a", "kind": "limit", "description": "d", "severity": "low", "fix": ""}]}`, "missing fix"},
+		{"uppercase keyword", rule(`"regex": "(a)", "secret_group": 1, "keywords": ["AKIA"]`), "lowercase"},
+		{"group out of range", rule(`"regex": "(a)", "secret_group": 2`), "secret_group 2"},
+		{"bad regex", rule(`"regex": "(a"`), "missing closing )"},
+		{"unknown validator", rule(`"regex": "a", "validators": ["is-real"]`), `unknown validator "is-real"`},
+		{"bad validator arg", rule(`"regex": "a", "validators": ["min-entropy:high"]`), "min-entropy"},
+		{"unknown field", rule(`"regex": "a", "secret_grop": 1`), "unknown field"},
+		{"bad severity", `{"rules": [{"id": "a", "kind": "limit", "description": "d", "severity": "urgent", "fix": "f"}]}`, "unknown severity"},
+		{"regex on config rule", `{"rules": [{"id": "a", "kind": "config", "description": "d", "severity": "low", "fix": "f", "regex": "a"}]}`, "only pattern rules"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			_, err := Load([]byte(tt.data))
+			if err == nil || !strings.Contains(err.Error(), tt.want) {
+				t.Errorf("Load error = %v, want it to mention %q", err, tt.want)
 			}
+		})
+	}
+}
+
+func TestValidatorsCombine(t *testing.T) {
+	cat, err := Load([]byte(`{"rules": [{"id": "x", "kind": "pattern", "description": "d", "severity": "high", "fix": "f",
+		"regex": "=(\\S+)", "secret_group": 1, "validators": ["not-placeholder", "min-entropy:3.0"]}]}`))
+	if err != nil {
+		t.Fatal(err)
+	}
+	r := cat.Patterns[0]
+	for line, want := range map[string]bool{"=Xk9vQ2mLp7Rt": true, "=your-key-here-x": false, "=aaaaaaaaaaaa": false} {
+		if got := len(r.Find(line, strings.ToLower(line))) > 0; got != want {
+			t.Errorf("%q matched=%v, want %v", line, got, want)
 		}
 	}
 }

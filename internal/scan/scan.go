@@ -8,10 +8,8 @@ import (
 	"context"
 	"io/fs"
 	"os"
-	"path"
 	"path/filepath"
 	"runtime"
-	"sort"
 	"strings"
 	"sync"
 	"time"
@@ -20,6 +18,8 @@ import (
 	"keyguard/internal/detect"
 	"keyguard/internal/finding"
 	"keyguard/internal/ignore"
+	"keyguard/internal/pathpolicy"
+	"keyguard/internal/rules"
 )
 
 type Options struct {
@@ -36,33 +36,11 @@ type Result struct {
 	Duration     time.Duration
 }
 
-// IgnoreFile is read from the scan root, in .gitignore syntax.
-const IgnoreFile = ".keyguardignore"
-
-var skipDirs = map[string]bool{
-	".git": true, "node_modules": true, "vendor": true, "dist": true, "build": true,
-	".next": true, ".nuxt": true, ".svelte-kit": true, ".turbo": true, ".vercel": true,
-	".expo": true, "coverage": true, "out": true, "__pycache__": true, ".venv": true,
-	"venv": true, "target": true, "Pods": true, ".gradle": true, ".idea": true,
-}
-
-// Files whose contents are full of hashes that look random but are public.
-var skipFiles = map[string]bool{
-	"package-lock.json": true, "yarn.lock": true, "pnpm-lock.yaml": true, "bun.lockb": true,
-	"go.sum": true, "Cargo.lock": true, "poetry.lock": true, "Gemfile.lock": true,
-	"composer.lock": true, "Podfile.lock": true,
-}
-
-var skipExts = map[string]bool{
-	".png": true, ".jpg": true, ".jpeg": true, ".gif": true, ".webp": true, ".ico": true,
-	".svg": true, ".pdf": true, ".zip": true, ".gz": true, ".tar": true, ".woff": true,
-	".woff2": true, ".ttf": true, ".eot": true, ".mp4": true, ".mov": true, ".mp3": true,
-	".map": true, ".lock": true, ".snap": true,
-}
-
 type fileResult struct {
+	rel      string
 	findings []finding.Finding
 	scanned  bool
+	env      bool // a dotenv file: checked for git exposure once the walk is done
 }
 
 // Dir scans every file under opts.Root.
@@ -74,15 +52,21 @@ func Dir(ctx context.Context, opts Options) (*Result, error) {
 	if opts.MaxFileSize <= 0 {
 		opts.MaxFileSize = 2 << 20
 	}
-	ign, err := ignore.Load(filepath.Join(opts.Root, IgnoreFile))
+	ign, err := ignore.Load(filepath.Join(opts.Root, pathpolicy.IgnoreFile))
 	if err != nil {
 		return nil, err
 	}
-	det := detect.New(opts.Entropy)
+	det, err := detect.New(opts.Entropy)
+	if err != nil {
+		return nil, err
+	}
 
 	// Pipeline: one walker goroutine -> paths channel -> N workers -> results channel -> this goroutine.
+	// Everything the collector needs travels on a channel, so no variable is
+	// shared between goroutines.
 	paths := make(chan string)
 	results := make(chan fileResult)
+	walkErr := make(chan error, 1) // buffered: the walker can always send and exit
 	var wg sync.WaitGroup
 	for i := 0; i < opts.Workers; i++ {
 		wg.Add(1)
@@ -90,16 +74,14 @@ func Dir(ctx context.Context, opts Options) (*Result, error) {
 			defer wg.Done()
 			for rel := range paths {
 				found, ok := scanFile(det, opts, rel)
-				results <- fileResult{findings: found, scanned: ok}
+				results <- fileResult{rel: rel, findings: found, scanned: ok, env: pathpolicy.IsEnvFile(rel)}
 			}
 		}()
 	}
 
-	var walkErr error
-	var envFiles []string
 	go func() {
 		defer close(paths)
-		walkErr = filepath.WalkDir(opts.Root, func(p string, d fs.DirEntry, err error) error {
+		walkErr <- filepath.WalkDir(opts.Root, func(p string, d fs.DirEntry, err error) error {
 			if err != nil {
 				return nil // unreadable entry: skip it, keep walking
 			}
@@ -109,7 +91,7 @@ func Dir(ctx context.Context, opts Options) (*Result, error) {
 				return nil
 			}
 			if d.IsDir() {
-				if skipDirs[d.Name()] || ign.Match(rel, true) {
+				if pathpolicy.SkipDir(d.Name()) || ign.Match(rel, true) {
 					return filepath.SkipDir
 				}
 				return nil
@@ -122,9 +104,6 @@ func Dir(ctx context.Context, opts Options) (*Result, error) {
 			case <-ctx.Done():
 				return ctx.Err()
 			}
-			if checks.IsEnvFile(rel) {
-				envFiles = append(envFiles, rel)
-			}
 			return nil
 		})
 	}()
@@ -132,44 +111,31 @@ func Dir(ctx context.Context, opts Options) (*Result, error) {
 	go func() { wg.Wait(); close(results) }()
 
 	res := &Result{}
+	var envFiles []string
 	for r := range results {
 		res.Findings = append(res.Findings, r.findings...)
 		if r.scanned {
 			res.FilesScanned++
 		}
+		if r.env {
+			envFiles = append(envFiles, r.rel)
+		}
 	}
-	// Safe to read: walkErr/envFiles were written before close(paths),
-	// which happens before wg.Wait returns and results is closed.
-	if walkErr != nil {
-		return nil, walkErr
+	if err := <-walkErr; err != nil {
+		return nil, err
 	}
-	res.Findings = append(res.Findings, checks.EnvExposure(opts.Root, envFiles)...)
-	Sort(res.Findings)
+	exposed, err := envExposure(ctx, opts.Root, envFiles)
+	if err != nil {
+		return nil, err
+	}
+	res.Findings = append(res.Findings, exposed...)
+	finding.Sort(res.Findings)
 	res.Duration = time.Since(start)
 	return res, nil
 }
 
-// Skippable reports whether a file is never worth scanning (lockfiles, media, minified bundles).
-func Skippable(rel string) bool {
-	name := path.Base(rel)
-	return skipFiles[name] || skipExts[strings.ToLower(path.Ext(name))] ||
-		strings.HasSuffix(name, ".min.js") || strings.HasSuffix(name, ".min.css")
-}
-
-// SkipPath reports whether a repo-relative path is excluded by the built-in
-// policy: inside a skipped directory (node_modules, .git, dist...) or Skippable.
-func SkipPath(rel string) bool {
-	parts := strings.Split(rel, "/")
-	for _, d := range parts[:len(parts)-1] {
-		if skipDirs[d] {
-			return true
-		}
-	}
-	return Skippable(rel)
-}
-
 func scanFile(det *detect.Detector, opts Options, rel string) ([]finding.Finding, bool) {
-	if Skippable(rel) {
+	if pathpolicy.Skippable(rel) {
 		return nil, false
 	}
 	full := filepath.Join(opts.Root, filepath.FromSlash(rel))
@@ -182,9 +148,9 @@ func scanFile(det *detect.Detector, opts Options, rel string) ([]finding.Finding
 		return nil, false
 	}
 	// A real .env file is SUPPOSED to hold secrets; the risk is it being
-	// committed or exposed, which checks.EnvExposure handles. Here we only
+	// committed or exposed, which envExposure handles. Here we only
 	// look at variable names and never touch the values.
-	if checks.IsEnvFile(rel) {
+	if pathpolicy.IsEnvFile(rel) {
 		return checks.EnvFile(rel, data), true
 	}
 	return Content(det, rel, data, opts.Context, checks.IsClientFile(rel, head(data))), true
@@ -206,23 +172,18 @@ func Content(det *detect.Detector, rel string, data []byte, contextLines int, cl
 	var out []finding.Finding
 	for i, line := range lines {
 		if len(out) >= maxFindingsPerFile {
-			out = append(out, finding.Finding{
-				RuleID: "too-many-findings", Description: "Scan stopped early: too many findings in this file",
-				Severity: finding.Medium, Source: finding.SourceCode, File: rel, Line: i + 1,
-				Fix: "This is usually a generated or vendored file. Review it, then add it to .keyguardignore if it's safe.",
-			})
+			f := rules.MustLookup("too-many-findings").Finding(finding.SourceCode)
+			f.File, f.Line = rel, i+1
+			out = append(out, f)
 			break
 		}
 		if strings.Contains(line, detect.IgnoreMarker) {
 			continue
 		}
 		for _, h := range det.Line(line) {
-			out = append(out, finding.Finding{
-				RuleID: h.RuleID, Description: h.Description, Severity: h.Severity,
-				Source: finding.SourceCode, File: rel, Line: i + 1, Column: h.Start + 1,
-				Secret: finding.Redact(h.Secret), SecretHash: finding.Hash(h.RuleID, h.Secret),
-				Fix: h.Fix, Context: ctx.around(i),
-			})
+			f := h.Finding(finding.SourceCode, rel, i+1)
+			f.Context = ctx.around(i)
+			out = append(out, f)
 		}
 		for _, f := range checks.Line(rel, line, i+1, client) {
 			f.Context = ctx.around(i)
@@ -296,17 +257,3 @@ func head(data []byte) []byte { return data[:min(len(data), 512)] }
 
 // isBinary uses the same trick as git: a NUL byte near the start means binary.
 func isBinary(data []byte) bool { return bytes.IndexByte(head(data), 0) >= 0 }
-
-// Sort orders findings by severity (highest first), then file and line.
-func Sort(fs []finding.Finding) {
-	sort.SliceStable(fs, func(i, j int) bool {
-		a, b := fs[i], fs[j]
-		if a.Severity != b.Severity {
-			return a.Severity > b.Severity
-		}
-		if a.File != b.File {
-			return a.File < b.File
-		}
-		return a.Line < b.Line
-	})
-}

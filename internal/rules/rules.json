@@ -1,0 +1,234 @@
+{
+  "rules": [
+    {
+      "id": "aws-access-key-id",
+      "kind": "pattern",
+      "description": "AWS access key ID",
+      "severity": "high",
+      "keywords": ["akia", "asia"],
+      "regex": "\\b((?:AKIA|ASIA)[0-9A-Z]{16})\\b",
+      "secret_group": 1,
+      "fix": "Revoke/rotate this key in the provider's dashboard first (assume it is compromised), then load it from a server-side environment variable. Prefer IAM roles or short-lived credentials over long-lived keys."
+    },
+    {
+      "id": "aws-secret-access-key",
+      "kind": "pattern",
+      "description": "AWS secret access key",
+      "severity": "high",
+      "keywords": ["aws"],
+      "regex": "(?i)aws[\\w.-]{0,20}?(?:secret|private)[\\w.-]{0,20}?\\s*[:=]\\s*['\"]?([A-Za-z0-9/+=]{40})\\b",
+      "secret_group": 1,
+      "fix": "Revoke/rotate this key in the provider's dashboard first (assume it is compromised), then load it from a server-side environment variable."
+    },
+    {
+      "id": "github-token",
+      "kind": "pattern",
+      "description": "GitHub token",
+      "severity": "high",
+      "keywords": ["ghp_", "gho_", "ghu_", "ghs_", "ghr_", "github_pat_"],
+      "regex": "\\b(gh[pousr]_[A-Za-z0-9]{36,255}|github_pat_[A-Za-z0-9_]{60,255})\\b",
+      "secret_group": 1,
+      "fix": "Revoke it at github.com/settings/tokens, then use a fine-grained token stored in your CI secrets."
+    },
+    {
+      "id": "stripe-live-key",
+      "kind": "pattern",
+      "description": "Stripe live secret/restricted key",
+      "severity": "high",
+      "keywords": ["_live_"],
+      "regex": "\\b((?:sk|rk)_live_[0-9a-zA-Z]{24,99})\\b",
+      "secret_group": 1,
+      "fix": "Roll the key in the Stripe dashboard (Developers → API keys). It can move real money."
+    },
+    {
+      "id": "stripe-test-key",
+      "kind": "pattern",
+      "description": "Stripe test secret key",
+      "severity": "low",
+      "keywords": ["sk_test_"],
+      "regex": "\\b(sk_test_[0-9a-zA-Z]{24,99})\\b",
+      "secret_group": 1,
+      "fix": "Test keys can't move money, but still belong in env vars so live keys never end up here by habit."
+    },
+    {
+      "id": "anthropic-api-key",
+      "kind": "pattern",
+      "description": "Anthropic API key",
+      "severity": "high",
+      "keywords": ["sk-ant-"],
+      "regex": "\\b(sk-ant-(?:api03|admin01)-[A-Za-z0-9_-]{80,120})",
+      "secret_group": 1,
+      "fix": "Revoke/rotate this key in the provider's dashboard first (assume it is compromised), then load it from a server-side environment variable."
+    },
+    {
+      "id": "openai-api-key",
+      "kind": "pattern",
+      "description": "OpenAI API key",
+      "severity": "high",
+      "keywords": ["t3blbkfj"],
+      "regex": "\\b(sk-(?:proj-|svcacct-|admin-)?[A-Za-z0-9_-]{20,}T3BlbkFJ[A-Za-z0-9_-]{20,})",
+      "secret_group": 1,
+      "fix": "Revoke/rotate this key in the provider's dashboard first (assume it is compromised), then load it from a server-side environment variable."
+    },
+    {
+      "id": "slack-token",
+      "kind": "pattern",
+      "description": "Slack token",
+      "severity": "high",
+      "keywords": ["xox"],
+      "regex": "\\b(xox[baprs]-[0-9A-Za-z-]{10,})",
+      "secret_group": 1,
+      "fix": "Revoke/rotate this key in the provider's dashboard first (assume it is compromised), then load it from a server-side environment variable."
+    },
+    {
+      "id": "slack-webhook",
+      "kind": "pattern",
+      "description": "Slack incoming webhook URL",
+      "severity": "medium",
+      "keywords": ["hooks.slack.com"],
+      "regex": "(https://hooks\\.slack\\.com/services/T[A-Za-z0-9]+/B[A-Za-z0-9]+/[A-Za-z0-9]+)",
+      "secret_group": 1,
+      "fix": "Anyone with this URL can post to your channel. Regenerate it in the Slack app settings."
+    },
+    {
+      "id": "sendgrid-api-key",
+      "kind": "pattern",
+      "description": "SendGrid API key",
+      "severity": "high",
+      "keywords": ["sg."],
+      "regex": "\\b(SG\\.[A-Za-z0-9_-]{22}\\.[A-Za-z0-9_-]{43})\\b",
+      "secret_group": 1,
+      "fix": "Revoke/rotate this key in the provider's dashboard first (assume it is compromised), then load it from a server-side environment variable."
+    },
+    {
+      "id": "supabase-secret-key",
+      "kind": "pattern",
+      "description": "Supabase secret API key",
+      "severity": "high",
+      "keywords": ["sb_secret_"],
+      "regex": "\\b(sb_secret_[A-Za-z0-9_-]{20,})",
+      "secret_group": 1,
+      "fix": "This key bypasses Row Level Security. Rotate it in Supabase → Project Settings → API and use it only on the server."
+    },
+    {
+      "id": "supabase-service-role-jwt",
+      "kind": "pattern",
+      "description": "Supabase service_role JWT",
+      "severity": "high",
+      "keywords": ["eyj"],
+      "regex": "\\b(eyJ[A-Za-z0-9_-]{10,}\\.eyJ[A-Za-z0-9_-]{10,}\\.[A-Za-z0-9_-]{10,})",
+      "secret_group": 1,
+      "validators": ["jwt-role:service_role"],
+      "fix": "service_role bypasses Row Level Security — anyone holding it owns your database. Rotate the JWT secret in Supabase and keep this key server-side only."
+    },
+    {
+      "id": "jwt",
+      "kind": "pattern",
+      "description": "JSON Web Token",
+      "severity": "low",
+      "keywords": ["eyj"],
+      "regex": "\\b(eyJ[A-Za-z0-9_-]{10,}\\.eyJ[A-Za-z0-9_-]{10,}\\.[A-Za-z0-9_-]{10,})",
+      "secret_group": 1,
+      "validators": ["jwt-role-not:anon,service_role"],
+      "fix": "Check whether this token grants access. If it does, remove it and issue tokens at runtime instead."
+    },
+    {
+      "id": "private-key",
+      "kind": "pattern",
+      "description": "Private key",
+      "severity": "high",
+      "keywords": ["private key"],
+      "regex": "(-----BEGIN (?:RSA |EC |DSA |OPENSSH |PGP |ENCRYPTED )?PRIVATE KEY(?: BLOCK)?-----)",
+      "secret_group": 1,
+      "fix": "Delete the key file from the repo, generate a new key pair, and revoke the old public key wherever it is trusted."
+    },
+    {
+      "id": "google-api-key",
+      "kind": "pattern",
+      "description": "Google API key",
+      "severity": "medium",
+      "keywords": ["aiza"],
+      "regex": "\\b(AIza[0-9A-Za-z_-]{35})\\b",
+      "secret_group": 1,
+      "fix": "Firebase web keys are designed to be public, but only if restricted. Add HTTP-referrer and API restrictions in Google Cloud Console; rotate it if it's a server key."
+    },
+    {
+      "id": "database-url-password",
+      "kind": "pattern",
+      "description": "Password in database connection string",
+      "severity": "high",
+      "keywords": ["://"],
+      "regex": "(?i)\\b(?:postgres(?:ql)?|mysql|mariadb|mongodb(?:\\+srv)?|redis|rediss|amqps?)://[^:\\s/'\"@]+:([^@\\s'\"/]+)@",
+      "secret_group": 1,
+      "validators": ["not-placeholder"],
+      "fix": "Change the database password, then read the full URL from an environment variable (DATABASE_URL)."
+    },
+    {
+      "id": "generic-secret",
+      "kind": "pattern",
+      "description": "Hardcoded secret in assignment",
+      "severity": "medium",
+      "keywords": ["secret", "passw", "pwd", "token", "key", "auth", "credential"],
+      "regex": "(?i)[\\w.-]*(?:secret|passw(?:or)?d|pwd|token|api[_-]?key|access[_-]?key|auth[_-]?key|credential)[\\w.-]*['\"]?\\s*(?::=|=|:|=>)\\s*['\"]([^'\"\\s]{8,})['\"]",
+      "secret_group": 1,
+      "validators": ["not-placeholder", "min-entropy:3.0"],
+      "fix": "Move the value into an environment variable or a secrets manager and rotate it if it was ever committed."
+    },
+    {
+      "id": "high-entropy-string",
+      "kind": "entropy",
+      "description": "High-entropy string (possible secret)",
+      "severity": "medium",
+      "fix": "If this is a credential, move it to an environment variable. If it's not, add a `keyguard:ignore` comment on the line."
+    },
+    {
+      "id": "secret-in-public-env-var",
+      "kind": "config",
+      "description": "Secret-looking variable uses a browser-exposed prefix",
+      "severity": "high",
+      "fix": "Variables with NEXT_PUBLIC_/VITE_/REACT_APP_/EXPO_PUBLIC_ prefixes are baked into the JavaScript bundle that every visitor downloads. Drop the prefix, read it only on the server, and rotate the value."
+    },
+    {
+      "id": "supabase-admin-key-in-client",
+      "kind": "config",
+      "description": "Supabase admin key referenced in client-side code",
+      "severity": "medium",
+      "fix": "Admin keys must never reach the browser. Move this call into a server route/action (route.ts, a Server Action, or an Edge Function) and use the anon/publishable key in client code."
+    },
+    {
+      "id": "debug-in-production-config",
+      "kind": "config",
+      "description": "Debug mode enabled in a production config file",
+      "severity": "low",
+      "fix": "Debug output can leak stack traces, env values and internal paths. Disable it for production."
+    },
+    {
+      "id": "env-file-committed",
+      "kind": "config",
+      "description": "Environment file is committed to git",
+      "severity": "high",
+      "fix": "Run `git rm --cached {file}`, add it to .gitignore, and rotate every value in it — they are in your git history now (see --history)."
+    },
+    {
+      "id": "env-file-not-ignored",
+      "kind": "config",
+      "description": "Environment file is not in .gitignore",
+      "severity": "high",
+      "fix": "Add `.env*` and `!.env.example` to .gitignore so the next `git add .` can't commit it."
+    },
+    {
+      "id": "env-file-in-history",
+      "kind": "history",
+      "description": "Environment file was committed",
+      "severity": "high",
+      "fix": "Every value in this file is public to anyone with the repo. Rotate them all, then purge the file from history with git filter-repo or BFG."
+    },
+    {
+      "id": "too-many-findings",
+      "kind": "limit",
+      "description": "Scan stopped early: too many findings in this file",
+      "severity": "medium",
+      "fix": "This is usually a generated or vendored file. Review it, then add it to .keyguardignore if it's safe."
+    }
+  ]
+}

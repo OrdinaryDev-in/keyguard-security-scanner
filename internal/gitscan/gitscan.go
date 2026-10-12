@@ -10,17 +10,17 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"os/exec"
 	"path/filepath"
 	"regexp"
 	"strconv"
 	"strings"
 
-	"keyguard/internal/checks"
 	"keyguard/internal/detect"
 	"keyguard/internal/finding"
+	"keyguard/internal/gitcmd"
 	"keyguard/internal/ignore"
-	"keyguard/internal/scan"
+	"keyguard/internal/pathpolicy"
+	"keyguard/internal/rules"
 )
 
 type Options struct {
@@ -44,7 +44,7 @@ var hunkHeader = regexp.MustCompile(`^@@ -\d+(?:,\d+)? \+(\d+)`)
 func Scan(ctx context.Context, opts Options) (*Result, error) {
 	// --no-textconv/--no-ext-diff: a scanned repo's .git/config can name
 	// programs git would run to render diffs. Never execute repo-supplied code.
-	args := []string{"-c", "core.fsmonitor=false", "-C", opts.Root, "log", "-p", "--all", "--no-color", "--no-ext-diff", "--no-textconv",
+	args := []string{"log", "-p", "--all", "--no-color", "--no-ext-diff", "--no-textconv",
 		"--no-renames", "-U0", "--pretty=format:" + commitMarker + "%H%x1f%an%x1f%aI"}
 	if opts.MaxCommits > 0 {
 		args = append(args, "-n", strconv.Itoa(opts.MaxCommits))
@@ -52,7 +52,11 @@ func Scan(ctx context.Context, opts Options) (*Result, error) {
 	if opts.Since != "" {
 		args = append(args, "--since="+opts.Since)
 	}
-	cmd := exec.CommandContext(ctx, "git", args...)
+	det, err := detect.New(opts.Entropy)
+	if err != nil {
+		return nil, err
+	}
+	cmd := gitcmd.Command(ctx, opts.Root, args...)
 	var stderr strings.Builder
 	cmd.Stderr = &stderr
 	out, err := cmd.StdoutPipe()
@@ -63,7 +67,7 @@ func Scan(ctx context.Context, opts Options) (*Result, error) {
 		return nil, fmt.Errorf("running git: %w", err)
 	}
 
-	p := newParser(detect.New(opts.Entropy), opts.Root)
+	p := newParser(det, opts.Root)
 	readErr := eachLine(out, p.line)
 	if readErr != nil {
 		// Keep draining so git never blocks on a full pipe: calling Wait
@@ -131,7 +135,7 @@ func newParser(det *detect.Detector, root string) *parser {
 	p := &parser{det: det, found: map[string]finding.Finding{}}
 	if root != "" {
 		// Same ignore file as the working-tree scan; a missing file is fine.
-		p.ign, _ = ignore.Load(filepath.Join(root, scan.IgnoreFile))
+		p.ign, _ = ignore.Load(filepath.Join(root, pathpolicy.IgnoreFile))
 	}
 	return p
 }
@@ -139,7 +143,7 @@ func newParser(det *detect.Detector, root string) *parser {
 // skip applies the same path policy as the working-tree scan, so history
 // doesn't report node_modules/ or paths the user put in .keyguardignore.
 func (p *parser) skip(file string) bool {
-	return scan.SkipPath(file) || p.ign.Match(file, false)
+	return pathpolicy.SkipPath(file) || p.ign.Match(file, false)
 }
 
 func (p *parser) line(l string) {
@@ -158,13 +162,10 @@ func (p *parser) line(l string) {
 			p.file = strings.TrimPrefix(f, "b/")
 			if p.skip(p.file) {
 				p.file = "" // no file = added lines below are ignored
-			} else if checks.IsEnvFile(p.file) {
-				p.record(finding.Finding{
-					RuleID: "env-file-in-history", Severity: finding.High, Source: finding.SourceHistory,
-					Description: "Environment file was committed",
-					File:        p.file,
-					Fix:         "Every value in this file is public to anyone with the repo. Rotate them all, then purge the file from history with git filter-repo or BFG.",
-				}, "")
+			} else if pathpolicy.IsEnvFile(p.file) {
+				f := rules.MustLookup("env-file-in-history").Finding(finding.SourceHistory)
+				f.File = p.file
+				p.record(f, "")
 			}
 		}
 	case strings.HasPrefix(l, "@@"):
@@ -177,13 +178,10 @@ func (p *parser) line(l string) {
 		// History runs secret rules only, not checks.Line: config smells in
 		// old commits are noise, but a leaked value there is still live.
 		for _, h := range p.det.Line(content) {
-			p.record(finding.Finding{
-				RuleID: h.RuleID, Description: h.Description, Severity: h.Severity,
-				Source: finding.SourceHistory, File: p.file, Line: p.lineNo, Column: h.Start + 1,
-				Secret: finding.Redact(h.Secret), SecretHash: finding.Hash(h.RuleID, h.Secret),
-				Fix:     h.Fix + " Removing it in a new commit is not enough: it stays in history until rewritten.",
-				Context: []finding.ContextLine{{Number: p.lineNo, Text: p.det.RedactLine(content), Hit: true}},
-			}, h.Secret)
+			f := h.Finding(finding.SourceHistory, p.file, p.lineNo)
+			f.Fix += " Removing it in a new commit is not enough: it stays in history until rewritten."
+			f.Context = []finding.ContextLine{{Number: p.lineNo, Text: p.det.RedactLine(content), Hit: true}}
+			p.record(f, h.Secret)
 		}
 		p.lineNo++
 	}
@@ -204,6 +202,6 @@ func (p *parser) results() []finding.Finding {
 	for _, k := range p.order {
 		out = append(out, p.found[k])
 	}
-	scan.Sort(out)
+	finding.Sort(out)
 	return out
 }

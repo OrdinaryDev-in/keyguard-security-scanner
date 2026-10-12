@@ -1,22 +1,6 @@
 package checks
 
-import (
-	"os"
-	"os/exec"
-	"path/filepath"
-	"testing"
-)
-
-func TestIsEnvFile(t *testing.T) {
-	for name, want := range map[string]bool{
-		".env": true, ".env.local": true, "apps/web/.env.production": true,
-		".env.example": false, ".env.sample": false, "env.ts": false, ".envrc": false, "config.env": false,
-	} {
-		if got := IsEnvFile(name); got != want {
-			t.Errorf("IsEnvFile(%q) = %v, want %v", name, got, want)
-		}
-	}
-}
+import "testing"
 
 func TestPublicSecretVar(t *testing.T) {
 	tests := []struct {
@@ -79,46 +63,5 @@ func TestSupabaseAdminInClient(t *testing.T) {
 	}
 	if len(Line("app/page.tsx", "// "+line, 1, true)) != 0 {
 		t.Error("comment should be ignored")
-	}
-}
-
-func TestEnvExposureGit(t *testing.T) {
-	if _, err := exec.LookPath("git"); err != nil {
-		t.Skip("git not installed")
-	}
-	dir := t.TempDir()
-	run := func(args ...string) {
-		cmd := exec.Command("git", append([]string{"-C", dir}, args...)...)
-		cmd.Env = append(os.Environ(), "GIT_CONFIG_GLOBAL=/dev/null",
-			"GIT_AUTHOR_NAME=T", "GIT_AUTHOR_EMAIL=t@e.co", "GIT_COMMITTER_NAME=T", "GIT_COMMITTER_EMAIL=t@e.co")
-		if out, err := cmd.CombinedOutput(); err != nil {
-			t.Fatalf("git %v: %s", args, out)
-		}
-	}
-	write := func(name, s string) { os.WriteFile(filepath.Join(dir, name), []byte(s), 0o644) }
-
-	run("init", "-q")
-	write(".gitignore", ".env.local\n")
-	write(".env.local", "A=1\n")      // ignored: fine
-	write(".env", "A=1\n")            // not ignored
-	write(".env.production", "A=1\n") // committed
-	run("add", ".gitignore", ".env.production")
-	run("commit", "-q", "-m", "x")
-
-	got := map[string]string{}
-	for _, f := range EnvExposure(dir, []string{".env.local", ".env", ".env.production"}) {
-		got[f.File] = f.RuleID
-	}
-	want := map[string]string{".env": "env-file-not-ignored", ".env.production": "env-file-committed"}
-	if len(got) != len(want) || got[".env"] != want[".env"] || got[".env.production"] != want[".env.production"] {
-		t.Errorf("got %v, want %v", got, want)
-	}
-}
-
-func TestEnvExposureNoRepo(t *testing.T) {
-	dir := t.TempDir()
-	os.WriteFile(filepath.Join(dir, ".gitignore"), []byte(".env*\n"), 0o644)
-	if fs := EnvExposure(dir, []string{".env"}); len(fs) != 0 {
-		t.Errorf(".gitignore covers .env but got %+v", fs)
 	}
 }

@@ -70,3 +70,15 @@ func TestHTMLOutputFile(t *testing.T) {
 		t.Errorf("bad html output; stderr=%s", stderr.String())
 	}
 }
+
+func TestRulesListsWholeCatalogue(t *testing.T) {
+	var out bytes.Buffer
+	if code := run([]string{"rules"}, &out, io.Discard); code != exitClean {
+		t.Fatalf("exit %d", code)
+	}
+	for _, id := range []string{"aws-access-key-id", "high-entropy-string", "env-file-committed", "env-file-in-history", "supabase-admin-key-in-client"} {
+		if !strings.Contains(out.String(), id) {
+			t.Errorf("rules output is missing %s", id)
+		}
+	}
+}

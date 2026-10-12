@@ -14,7 +14,17 @@ import (
 
 	"keyguard/internal/detect"
 	"keyguard/internal/fixture"
+	"keyguard/internal/pathpolicy"
 )
+
+func newDetector(t *testing.T) *detect.Detector {
+	t.Helper()
+	d, err := detect.New(true)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return d
+}
 
 func scanFixture(t *testing.T) (*Result, string) {
 	t.Helper()
@@ -98,7 +108,7 @@ func TestKeyguardIgnoreFile(t *testing.T) {
 	if err := fixture.Write(dir); err != nil {
 		t.Fatal(err)
 	}
-	os.WriteFile(filepath.Join(dir, IgnoreFile), []byte("keys/\nconfig/aws.js\n"), 0o644)
+	os.WriteFile(filepath.Join(dir, pathpolicy.IgnoreFile), []byte("keys/\nconfig/aws.js\n"), 0o644)
 	res, err := Dir(context.Background(), Options{Root: dir, Entropy: true})
 	if err != nil {
 		t.Fatal(err)
@@ -142,7 +152,7 @@ func TestPEMBodyInStringNotLeaked(t *testing.T) {
 		src += "  \"" + b + "\\n\" +\n"
 	}
 	src += "  \"-----END RSA " + "PRIVATE KEY-----\";\n"
-	fs := Content(detect.New(true), "key.js", []byte(src), 5, false)
+	fs := Content(newDetector(t), "key.js", []byte(src), 5, false)
 	out, _ := json.Marshal(fs)
 	for _, b := range body {
 		if strings.Contains(string(out), b[:12]) {
@@ -165,7 +175,7 @@ func TestManyHitsBounded(t *testing.T) {
 		b.WriteString(`",`)
 	}
 	start := time.Now()
-	fs := Content(detect.New(true), "gen.js", []byte(b.String()), 3, false)
+	fs := Content(newDetector(t), "gen.js", []byte(b.String()), 3, false)
 	if d := time.Since(start); d > 2*time.Second {
 		t.Errorf("took %v", d)
 	}

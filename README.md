@@ -99,14 +99,17 @@ See [`docs/github-action.yml`](docs/github-action.yml): it fails the build on a 
 ```
 cmd/keyguard            CLI, flags, exit codes
 internal/
-  rules     17 regex rules + validators (RE2 → linear-time, ReDoS-safe)
-  entropy   Shannon entropy with length-scaled thresholds
-  detect    rules + entropy per line, overlap de-dupe, redaction
-  scan      parallel directory walk (goroutine worker pool)
-  checks    risky-config checks (.env exposure, public env vars, client code)
-  gitscan   streams `git log -p` through a diff parser
-  report    text / JSON / SARIF / HTML (html/template + go:embed)
-  fixture   runtime-generated vulnerable demo app (no literal secrets in repo)
+  rules       rule catalogue (embedded rules.json): 17 regex rules + named
+              validators (RE2 → linear-time, ReDoS-safe), plus metadata for every check
+  entropy     Shannon entropy with length-scaled thresholds
+  detect      rules + entropy per line, overlap de-dupe, redaction
+  scan        parallel directory walk (goroutine worker pool), .env git exposure
+  checks      pure risky-config checks (public env vars, client code, debug flags)
+  pathpolicy  which paths to skip, shared by scan and gitscan
+  gitcmd      hardened `git` invocations (no fsmonitor)
+  gitscan     streams `git log -p` through a diff parser
+  report      text / JSON / SARIF / HTML (html/template + go:embed)
+  fixture     runtime-generated vulnerable demo app (no literal secrets in repo)
 ```
 
 ## Development

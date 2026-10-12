@@ -54,14 +54,7 @@ func run(args []string, stdout, stderr io.Writer) int {
 	case "scan":
 		return runScan(args[1:], stdout, stderr)
 	case "rules":
-		tw := tabwriter.NewWriter(stdout, 0, 0, 2, ' ', 0)
-		fmt.Fprintln(tw, "RULE\tSEVERITY\tDESCRIPTION")
-		for _, r := range rules.Default() {
-			fmt.Fprintf(tw, "%s\t%s\t%s\n", r.ID, r.Severity, r.Description)
-		}
-		fmt.Fprintf(tw, "%s\t%s\t%s\n", "high-entropy-string", finding.Medium, "Random-looking quoted string (disable with --no-entropy)")
-		tw.Flush()
-		return exitClean
+		return runRules(stdout, stderr)
 	case "version", "--version", "-v":
 		fmt.Fprintln(stdout, "keyguard", version)
 		return exitClean
@@ -72,6 +65,24 @@ func run(args []string, stdout, stderr io.Writer) int {
 	}
 	fmt.Fprintf(stderr, "unknown command %q\n\n%s", args[0], usage)
 	return exitError
+}
+
+// runRules prints the whole rule catalogue: secret patterns and the
+// entropy, config and history checks alike.
+func runRules(stdout, stderr io.Writer) int {
+	cat, err := rules.Default()
+	if err != nil {
+		fmt.Fprintln(stderr, "keyguard:", err)
+		return exitError
+	}
+	tw := tabwriter.NewWriter(stdout, 0, 0, 2, ' ', 0)
+	fmt.Fprintln(tw, "RULE\tKIND\tSEVERITY\tDESCRIPTION")
+	for _, m := range cat.All() {
+		fmt.Fprintf(tw, "%s\t%s\t%s\t%s\n", m.ID, m.Kind, m.Severity, m.Description)
+	}
+	tw.Flush()
+	fmt.Fprintln(stdout, "\nhigh-entropy-string can be turned off with --no-entropy.")
+	return exitClean
 }
 
 type scanFlags struct {

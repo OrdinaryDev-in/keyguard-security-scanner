@@ -15,6 +15,7 @@ My first Go project: a secret scanner I can put in front of my own deploys. Buil
 | [07](devlog/07-reports-and-html.md) | Reports & HTML | My own leak test caught private-key bodies in the context lines |
 | [08](devlog/08-dogfooding.md) | Dogfooding | The scanner flagged its own tests |
 | [09](devlog/09-security-review.md) | Security review | Scanning an untrusted repo could execute code via git textconv |
+| [10](devlog/10-refactor.md) | Refactor | One embedded rule catalogue, and channels instead of a happens-before proof |
 
 ## Top 5 lessons
 
@@ -30,8 +31,6 @@ After the build I ran three automated reviews (security, code quality, UX/access
 
 ## Next (v2 ideas)
 
-- Move rules to an embedded TOML file with named validators (a single rule catalogue).
-- A `internal/pathpolicy` package shared by `scan` and `gitscan`.
 - Live key verification (opt-in): ask the provider whether a found key is still active.
 - A pre-commit hook installer: `keyguard install-hook`.
 - A dictionary-word check to stop flagging identifiers like `handleOAuth2CallbackV2`.

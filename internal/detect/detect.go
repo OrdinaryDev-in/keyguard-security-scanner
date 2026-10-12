@@ -3,7 +3,9 @@
 package detect
 
 import (
+	"errors"
 	"regexp"
+	"slices"
 	"sort"
 	"strings"
 
@@ -18,21 +20,40 @@ const IgnoreMarker = "keyguard:ignore"
 type Detector struct {
 	Rules   []*rules.Rule
 	Entropy bool
+	entropy rules.Meta
 }
 
-func New(entropyOn bool) *Detector {
-	return &Detector{Rules: rules.Default(), Entropy: entropyOn}
+// New builds a detector from the built-in rule catalogue.
+func New(entropyOn bool) (*Detector, error) {
+	cat, err := rules.Default()
+	if err != nil {
+		return nil, err
+	}
+	ent, ok := cat.Lookup(entropyRuleID)
+	if !ok {
+		return nil, errors.New("rules: built-in catalogue has no " + entropyRuleID + " rule")
+	}
+	// Clone: the catalogue is cached and shared; a caller replacing
+	// d.Rules[i] must not change it for everyone else.
+	return &Detector{Rules: slices.Clone(cat.Patterns), Entropy: entropyOn, entropy: ent}, nil
 }
 
 // Hit is a secret found on one line.
 type Hit struct {
-	RuleID      string
-	Description string
-	Severity    finding.Severity
-	Fix         string
-	Secret      string
-	Start, End  int
-	order       int // rule index, used to break ties
+	Rule       rules.Meta
+	Secret     string
+	Start, End int
+	order      int // rule index, used to break ties
+}
+
+// Finding turns a hit on line lineNo of file into a Finding. The secret is
+// redacted; only its hash is kept, for de-duplication. Callers add Context.
+func (h Hit) Finding(src finding.Source, file string, lineNo int) finding.Finding {
+	f := h.Rule.Finding(src)
+	f.File, f.Line, f.Column = file, lineNo, h.Start+1
+	f.Secret = finding.Redact(h.Secret)
+	f.SecretHash = finding.Hash(h.Rule.ID, h.Secret)
+	return f
 }
 
 var base64Blob = regexp.MustCompile(`^[A-Za-z0-9+/=]+$`)
@@ -62,10 +83,7 @@ func (d *Detector) find(line string) []Hit {
 			if entropy.Shannon(m.Secret) < minRuleEntropy {
 				continue
 			}
-			hits = append(hits, Hit{
-				RuleID: r.ID, Description: r.Description, Severity: r.Severity, Fix: r.Fix,
-				Secret: m.Secret, Start: m.Start, End: m.End, order: i,
-			})
+			hits = append(hits, Hit{Rule: r.Meta, Secret: m.Secret, Start: m.Start, End: m.End, order: i})
 		}
 	}
 	if d.Entropy {
@@ -74,12 +92,7 @@ func (d *Detector) find(line string) []Hit {
 			toks = toks[:maxEntropyPerLine]
 		}
 		for _, t := range toks {
-			hits = append(hits, Hit{
-				RuleID: entropyRuleID, Description: "High-entropy string (possible secret)",
-				Severity: finding.Medium, Secret: t.Value, Start: t.Start, End: t.End,
-				Fix:   "If this is a credential, move it to an environment variable. If it's not, add a `keyguard:ignore` comment on the line.",
-				order: len(d.Rules),
-			})
+			hits = append(hits, Hit{Rule: d.entropy, Secret: t.Value, Start: t.Start, End: t.End, order: len(d.Rules)})
 		}
 	}
 	return dedupe(hits)
@@ -93,8 +106,8 @@ func dedupe(hits []Hit) []Hit {
 		return hits
 	}
 	sort.SliceStable(hits, func(i, j int) bool {
-		if hits[i].Severity != hits[j].Severity {
-			return hits[i].Severity > hits[j].Severity
+		if a, b := hits[i].Rule.Severity, hits[j].Rule.Severity; a != b {
+			return a > b
 		}
 		return hits[i].order < hits[j].order
 	})

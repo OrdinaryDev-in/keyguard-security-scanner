@@ -6,6 +6,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
+	"sort"
 	"strings"
 )
 
@@ -33,6 +34,16 @@ func (s Severity) String() string {
 
 // MarshalText makes Severity serialise as "high" instead of 3 in JSON.
 func (s Severity) MarshalText() ([]byte, error) { return []byte(s.String()), nil }
+
+// UnmarshalText is the reverse, so the rule catalogue can say "severity": "high".
+func (s *Severity) UnmarshalText(b []byte) error {
+	v, err := ParseSeverity(string(b))
+	if err != nil {
+		return err
+	}
+	*s = v
+	return nil
+}
 
 // ParseSeverity turns a CLI flag value into a Severity.
 func ParseSeverity(v string) (Severity, error) {
@@ -106,4 +117,18 @@ func Redact(secret string) string {
 func Hash(ruleID, secret string) string {
 	sum := sha256.Sum256([]byte(ruleID + "\x00" + secret))
 	return hex.EncodeToString(sum[:8])
+}
+
+// Sort orders findings by severity (highest first), then file and line.
+func Sort(fs []Finding) {
+	sort.SliceStable(fs, func(i, j int) bool {
+		a, b := fs[i], fs[j]
+		if a.Severity != b.Severity {
+			return a.Severity > b.Severity
+		}
+		if a.File != b.File {
+			return a.File < b.File
+		}
+		return a.Line < b.Line
+	})
 }
