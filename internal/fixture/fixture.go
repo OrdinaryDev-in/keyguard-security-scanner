@@ -31,6 +31,22 @@ var Expected = []string{
 	"src/lib/stripe.ts|stripe-live-key",
 	"src/lib/supabase-admin.ts|supabase-service-role-jwt",
 	"src/utils/webhook.js|high-entropy-string",
+
+	// Other stacks: secret detection is language-agnostic; these are the
+	// stack-specific ways of leaking.
+	"angular-app/src/environments/environment.prod.ts|angular-environment-secret",
+	"angular-app/firestore.rules|firebase-rules-public-write",
+	"angular-app/firestore.rules|firebase-rules-test-mode",
+	"firebase-admin.json|firebase-service-account",
+	"firebase-admin.json|private-key",
+	"node-api/src/auth.js|jwt-hardcoded-secret",
+	"node-api/.npmrc|npm-token",
+	"node-api/Dockerfile|dockerfile-secret",
+	"spring-api/src/main/resources/application.properties|config-file-secret",
+	"docker-compose.yml|config-file-secret",
+	"django-app/settings.py|generic-secret",
+	"vue-app/src/api.js|secret-in-public-env-var",
+	"infra/terraform.tfstate|terraform-state-file",
 }
 
 type gen struct{ r *rand.Rand }
@@ -53,7 +69,7 @@ func jwt(role string, sig string) string {
 func Files() map[string]string {
 	g := gen{rand.New(rand.NewSource(42))}
 	stripe := "sk_" + "live_" + g.str(alnum, 24)
-	return map[string]string{
+	files := map[string]string{
 		"src/lib/stripe.ts": "import Stripe from \"stripe\";\n\n" +
 			"// TODO: move to env before launch\n" +
 			"export const stripe = new Stripe(\"" + stripe + "\");\n",
@@ -103,6 +119,67 @@ func Files() map[string]string {
 			g.str(alnum+"+/", 86) + "==\"\n    }\n  }\n}\n",
 
 		"README.md": "# Demo app\n\nA deliberately insecure app for trying keyguard. All keys are fake.\n",
+	}
+	for rel, content := range otherStacks(g) {
+		files[rel] = content
+	}
+	return files
+}
+
+// otherStacks adds Angular/Firebase, Node, Spring, Docker, Django, Vue and
+// Terraform samples. Each file also holds a look-alike that must NOT be flagged.
+func otherStacks(g gen) map[string]string {
+	pemBody := g.str(alnum+"+/", 64)
+	return map[string]string{
+		"angular-app/src/environments/environment.prod.ts": "export const environment = {\n" +
+			"  production: true,\n" +
+			"  apiUrl: 'https://api.example.com',\n" + // fine: public config
+			"  firebase: { projectId: 'demo-app', authDomain: 'demo-app.firebaseapp.com' },\n" +
+			"  stripeSecretKey: '" + g.str(alnum, 28) + "',\n" +
+			"};\n",
+
+		"angular-app/firestore.rules": "rules_version = '2';\nservice cloud.firestore {\n  match /databases/{database}/documents {\n" +
+			"    match /users/{uid} { allow read, write: if request.auth != null && request.auth.uid == uid; }\n" + // fine
+			"    match /orders/{id} { allow read, write: if true; }\n" +
+			"    match /{document=**} { allow read, write: if request.time < timestamp.date(2026, 12, 31); }\n" +
+			"  }\n}\n",
+
+		"firebase-admin.json": "{\n  \"type\": \"service_account\",\n  \"project_id\": \"demo-app\",\n" +
+			"  \"private_key\": \"-----BEGIN " + "PRIV" + "ATE KEY-----\\n" + pemBody + "\\n-----END " + "PRIV" + "ATE KEY-----\\n\",\n" +
+			"  \"client_email\": \"admin@demo-app.iam.gserviceaccount.com\"\n}\n",
+
+		"node-api/src/auth.js": "const jwt = require('jsonwebtoken');\n" +
+			"const secret = process.env.JWT_SECRET;\n" + // fine
+			"exports.login = (user) => jwt.sign({ id: user.id }, \"" + g.str(alnum, 20) + "\", { expiresIn: '1h' });\n" +
+			"exports.check = (t) => jwt.verify(t, secret);\n", // fine: variable, not a literal
+
+		"node-api/.npmrc": "//registry.npmjs.org/:_authToken=" + "np" + "m_" + g.str(alnum, 36) + "\n",
+
+		"node-api/Dockerfile": "FROM node:22-alpine\nENV NODE_ENV=production\n" +
+			"ARG NPM_TOKEN\n" + // fine: no value baked in
+			"ENV DATABASE_PASSWORD=" + g.str(alnum, 16) + "9\n" +
+			"CMD [\"node\", \"server.js\"]\n",
+
+		"spring-api/src/main/resources/application.properties": "spring.datasource.url=jdbc:postgresql://db:5432/app\n" +
+			"spring.datasource.username=app\n" +
+			"spring.datasource.password=" + g.str(alnum, 14) + "7\n" +
+			"spring.mail.password=${MAIL_PASSWORD}\n" + // fine: env reference
+			"spring.security.password-encoder=bcrypt\n", // fine: a name, not a secret
+
+		"docker-compose.yml": "services:\n  db:\n    image: postgres:16\n    environment:\n" +
+			"      POSTGRES_USER: app\n" +
+			"      POSTGRES_PASSWORD: " + g.str(alnum, 12) + "3\n" +
+			"  api:\n    environment:\n      JWT_SECRET: ${JWT_SECRET}\n" + // fine
+			"    volumes:\n      - tls:/certs # secretName: my-tls-cert\n",
+
+		"django-app/settings.py": "DEBUG = False\n" +
+			"SECRET_KEY = '" + g.str(alnum+"!@#%^&*", 50) + "'\n" +
+			"DATABASE_PASSWORD = os.environ['DATABASE_PASSWORD']\n", // fine
+
+		"vue-app/src/api.js": "const key = process.env.VUE_APP_STRIPE_SECRET_KEY;\n" +
+			"const url = process.env.VUE_APP_API_URL;\n", // fine
+
+		"infra/terraform.tfstate": "{\n  \"version\": 4,\n  \"terraform_version\": \"1.9.0\",\n  \"resources\": []\n}\n",
 	}
 }
 

@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"path"
 	"regexp"
 	"strings"
 	"sync"
@@ -63,6 +64,7 @@ type ruleJSON struct {
 	Regex       string           `json:"regex"`
 	SecretGroup int              `json:"secret_group"`
 	Validators  []string         `json:"validators"`
+	Files       []string         `json:"files"`
 	Fix         string           `json:"fix"`
 }
 
@@ -114,8 +116,8 @@ func Load(data []byte) (*Catalogue, error) {
 				c.Patterns = append(c.Patterns, r)
 			}
 		case KindEntropy, KindConfig, KindHistory, KindLimit:
-			if rj.Regex != "" || len(rj.Keywords) > 0 || len(rj.Validators) > 0 || rj.SecretGroup != 0 {
-				bad("only pattern rules take regex, keywords, validators or secret_group")
+			if rj.Regex != "" || len(rj.Keywords) > 0 || len(rj.Validators) > 0 || rj.SecretGroup != 0 || len(rj.Files) > 0 {
+				bad("only pattern rules take regex, keywords, validators, secret_group or files")
 			}
 		default:
 			bad("unknown kind %q", rj.Kind)
@@ -154,9 +156,14 @@ func compile(meta Meta, rj ruleJSON, cache map[string]*regexp.Regexp) (*Rule, er
 			return nil, fmt.Errorf("keyword %q must be lowercase", k)
 		}
 	}
+	for _, g := range rj.Files {
+		if _, err := path.Match(g, ""); err != nil {
+			return nil, fmt.Errorf("files glob %q: %w", g, err)
+		}
+	}
 	validate, err := buildValidators(rj.Validators)
 	if err != nil {
 		return nil, err
 	}
-	return &Rule{Meta: meta, Keywords: rj.Keywords, Regex: re, SecretGroup: rj.SecretGroup, Validate: validate}, nil
+	return &Rule{Meta: meta, Keywords: rj.Keywords, Regex: re, SecretGroup: rj.SecretGroup, Validate: validate, Files: rj.Files}, nil
 }

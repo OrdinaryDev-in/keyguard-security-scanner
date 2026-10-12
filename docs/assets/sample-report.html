@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex">
-<title>keyguard report: 14 findings</title>
+<title>keyguard report: 27 findings</title>
 <style>:root {
   --bg: #f6f7f9; --surface: #ffffff; --surface-2: #f0f2f5; --border: #dfe3e8;
   --text: #15181d; --muted: #5b6573; --accent: #3b5bdb;
@@ -137,9 +137,9 @@ h1 { margin: 6px 0 16px; font-size: 1.6rem; letter-spacing: -.01em; }
     <h1>Security scan report</h1>
     <dl class="meta">
       <div><dt>Project</dt><dd><code>/tmp/keyguard-demo</code></dd></div>
-      <div><dt>Scanned</dt><dd>12 Oct 2026, 15:29 IST</dd></div>
-      <div><dt>Coverage</dt><dd>15 files, history not scanned</dd></div>
-      <div><dt>Duration</dt><dd>21 ms</dd></div>
+      <div><dt>Scanned</dt><dd>12 Oct 2026, 16:35 IST</dd></div>
+      <div><dt>Coverage</dt><dd>26 files, history not scanned</dd></div>
+      <div><dt>Duration</dt><dd>14 ms</dd></div>
     </dl>
   </div>
 </header>
@@ -147,11 +147,11 @@ h1 { margin: 6px 0 16px; font-size: 1.6rem; letter-spacing: -.01em; }
 <main class="wrap">
   <section class="summary" aria-label="Summary">
     <div class="card total bad">
-      <span class="num">14</span>
+      <span class="num">27</span>
       <span class="lbl">findings to review</span>
     </div>
-    <div class="card sev-high"><span class="num">9</span><span class="lbl">High</span></div>
-    <div class="card sev-medium"><span class="num">4</span><span class="lbl">Medium</span></div>
+    <div class="card sev-high"><span class="num">19</span><span class="lbl">High</span></div>
+    <div class="card sev-medium"><span class="num">7</span><span class="lbl">Medium</span></div>
     <div class="card sev-low"><span class="num">1</span><span class="lbl">Low</span></div>
   </section>
 
@@ -167,7 +167,7 @@ h1 { margin: 6px 0 16px; font-size: 1.6rem; letter-spacing: -.01em; }
     <label class="field"><span class="sr-only">Rule</span>
       <select id="rule-filter">
         <option value="">All rules</option>
-        <option value="aws-access-key-id">aws-access-key-id</option><option value="aws-secret-access-key">aws-secret-access-key</option><option value="database-url-password">database-url-password</option><option value="debug-in-production-config">debug-in-production-config</option><option value="env-file-not-ignored">env-file-not-ignored</option><option value="github-token">github-token</option><option value="google-api-key">google-api-key</option><option value="high-entropy-string">high-entropy-string</option><option value="openai-api-key">openai-api-key</option><option value="private-key">private-key</option><option value="secret-in-public-env-var">secret-in-public-env-var</option><option value="stripe-live-key">stripe-live-key</option><option value="supabase-admin-key-in-client">supabase-admin-key-in-client</option><option value="supabase-service-role-jwt">supabase-service-role-jwt</option>
+        <option value="angular-environment-secret">angular-environment-secret</option><option value="aws-access-key-id">aws-access-key-id</option><option value="aws-secret-access-key">aws-secret-access-key</option><option value="config-file-secret">config-file-secret</option><option value="database-url-password">database-url-password</option><option value="debug-in-production-config">debug-in-production-config</option><option value="dockerfile-secret">dockerfile-secret</option><option value="env-file-not-ignored">env-file-not-ignored</option><option value="firebase-rules-public-write">firebase-rules-public-write</option><option value="firebase-rules-test-mode">firebase-rules-test-mode</option><option value="firebase-service-account">firebase-service-account</option><option value="generic-secret">generic-secret</option><option value="github-token">github-token</option><option value="google-api-key">google-api-key</option><option value="high-entropy-string">high-entropy-string</option><option value="jwt-hardcoded-secret">jwt-hardcoded-secret</option><option value="npm-token">npm-token</option><option value="openai-api-key">openai-api-key</option><option value="private-key">private-key</option><option value="secret-in-public-env-var">secret-in-public-env-var</option><option value="stripe-live-key">stripe-live-key</option><option value="supabase-admin-key-in-client">supabase-admin-key-in-client</option><option value="supabase-service-role-jwt">supabase-service-role-jwt</option><option value="terraform-state-file">terraform-state-file</option>
       </select>
     </label>
     <label class="field grow"><span class="sr-only">Search files and descriptions</span>
@@ -180,7 +180,7 @@ h1 { margin: 6px 0 16px; font-size: 1.6rem; letter-spacing: -.01em; }
 
   
   <section class="group" data-group="code">
-    <h2>Secrets in code <span class="count">10</span></h2>
+    <h2>Secrets in code <span class="count">19</span></h2>
     <p class="blurb">Credentials hardcoded in files that will be committed or deployed.</p>
     <div class="list">
     
@@ -200,6 +200,25 @@ h1 { margin: 6px 0 16px; font-size: 1.6rem; letter-spacing: -.01em; }
           
           <div class="fix"><h3>How to fix</h3><p>Revoke/rotate this key in the provider&#39;s dashboard first (assume it is compromised), then load it from a server-side environment variable.</p></div>
           <p class="rule">Rule <code>openai-api-key</code> · column 16</p>
+        </div>
+      </details>
+    
+      <details class="finding" data-sev="high" data-rule="angular-environment-secret" data-text="angular-app/src/environments/environment.prod.ts secret in angular environment file (bundled into the browser)">
+        <summary>
+          <span class="badge high">HIGH</span>
+          <span class="what">
+            <span class="desc">Secret in Angular environment file (bundled into the browser)</span>
+            <span class="where"><code>angular-app/src/environments/environment.prod.ts:5</code> <code class="secret" title="Redacted">IfsO****</code></span>
+          </span>
+          <span class="chev" aria-hidden="true"></span>
+        </summary>
+        <div class="body">
+          
+          
+          <pre class="code" tabindex="0" role="group" aria-label="Code around the finding (secrets redacted)"><span class="ln"><span class="n">2</span>  production: true,</span><span class="ln"><span class="n">3</span>  apiUrl: &#39;https://api.example.com&#39;,</span><span class="ln"><span class="n">4</span>  firebase: { projectId: &#39;demo-app&#39;, authDomain: &#39;demo-app.firebaseapp.com&#39; },</span><span class="ln hit"><span class="n">5</span><span class="sr-only">Flagged line: </span>  stripeSecretKey: &#39;IfsO****&#39;,</span><span class="ln"><span class="n">6</span>};</span></pre>
+          
+          <div class="fix"><h3>How to fix</h3><p>Everything in environment.ts — including environment.prod.ts — is compiled into the JavaScript every visitor downloads. Public config (Firebase apiKey, project IDs) is fine; secrets must move to a backend (Cloud Function / API) and be rotated.</p></div>
+          <p class="rule">Rule <code>angular-environment-secret</code> · column 21</p>
         </div>
       </details>
     
@@ -241,6 +260,44 @@ h1 { margin: 6px 0 16px; font-size: 1.6rem; letter-spacing: -.01em; }
         </div>
       </details>
     
+      <details class="finding" data-sev="high" data-rule="firebase-service-account" data-text="firebase-admin.json firebase / google cloud service account key file">
+        <summary>
+          <span class="badge high">HIGH</span>
+          <span class="what">
+            <span class="desc">Firebase / Google Cloud service account key file</span>
+            <span class="where"><code>firebase-admin.json:2</code> <code class="secret" title="Redacted">serv****</code></span>
+          </span>
+          <span class="chev" aria-hidden="true"></span>
+        </summary>
+        <div class="body">
+          
+          
+          <pre class="code" tabindex="0" role="group" aria-label="Code around the finding (secrets redacted)"><span class="ln"><span class="n">1</span>{</span><span class="ln hit"><span class="n">2</span><span class="sr-only">Flagged line: </span>  &#34;type&#34;: &#34;serv****&#34;,</span><span class="ln"><span class="n">3</span>  &#34;project_id&#34;: &#34;demo-app&#34;,</span><span class="ln"><span class="n">4</span>  &#34;private_key&#34;: &#34;----****\n93b****\n-----END PRIVATE KEY-----\n&#34;,</span><span class="ln"><span class="n">5</span>[redacted private key]</span></pre>
+          
+          <div class="fix"><h3>How to fix</h3><p>A service account key gives admin access to your Firebase/GCP project and bypasses Security Rules. Delete the key in Google Cloud Console → IAM → Service Accounts, remove the file, and use Application Default Credentials or a secrets manager instead.</p></div>
+          <p class="rule">Rule <code>firebase-service-account</code> · column 12</p>
+        </div>
+      </details>
+    
+      <details class="finding" data-sev="high" data-rule="private-key" data-text="firebase-admin.json private key">
+        <summary>
+          <span class="badge high">HIGH</span>
+          <span class="what">
+            <span class="desc">Private key</span>
+            <span class="where"><code>firebase-admin.json:4</code> <code class="secret" title="Redacted">----****</code></span>
+          </span>
+          <span class="chev" aria-hidden="true"></span>
+        </summary>
+        <div class="body">
+          
+          
+          <pre class="code" tabindex="0" role="group" aria-label="Code around the finding (secrets redacted)"><span class="ln"><span class="n">1</span>{</span><span class="ln"><span class="n">2</span>  &#34;type&#34;: &#34;serv****&#34;,</span><span class="ln"><span class="n">3</span>  &#34;project_id&#34;: &#34;demo-app&#34;,</span><span class="ln hit"><span class="n">4</span><span class="sr-only">Flagged line: </span>  &#34;private_key&#34;: &#34;----****\n93b****\n-----END PRIVATE KEY-----\n&#34;,</span><span class="ln"><span class="n">5</span>[redacted private key]</span><span class="ln"><span class="n">6</span>[redacted private key]</span></pre>
+          
+          <div class="fix"><h3>How to fix</h3><p>Delete the key file from the repo, generate a new key pair, and revoke the old public key wherever it is trusted.</p></div>
+          <p class="rule">Rule <code>private-key</code> · column 19</p>
+        </div>
+      </details>
+    
       <details class="finding" data-sev="high" data-rule="private-key" data-text="keys/id_rsa private key">
         <summary>
           <span class="badge high">HIGH</span>
@@ -257,6 +314,63 @@ h1 { margin: 6px 0 16px; font-size: 1.6rem; letter-spacing: -.01em; }
           
           <div class="fix"><h3>How to fix</h3><p>Delete the key file from the repo, generate a new key pair, and revoke the old public key wherever it is trusted.</p></div>
           <p class="rule">Rule <code>private-key</code> · column 1</p>
+        </div>
+      </details>
+    
+      <details class="finding" data-sev="high" data-rule="npm-token" data-text="node-api/.npmrc npm access token">
+        <summary>
+          <span class="badge high">HIGH</span>
+          <span class="what">
+            <span class="desc">npm access token</span>
+            <span class="where"><code>node-api/.npmrc:1</code> <code class="secret" title="Redacted">npm_****</code></span>
+          </span>
+          <span class="chev" aria-hidden="true"></span>
+        </summary>
+        <div class="body">
+          
+          
+          <pre class="code" tabindex="0" role="group" aria-label="Code around the finding (secrets redacted)"><span class="ln hit"><span class="n">1</span><span class="sr-only">Flagged line: </span>//registry.npmjs.org/:_authToken=npm_****</span></pre>
+          
+          <div class="fix"><h3>How to fix</h3><p>Anyone with this token can publish packages as you. Revoke it at npmjs.com → Access Tokens, then use a granular token stored in CI secrets (and keep .npmrc tokens as ${NPM_TOKEN}).</p></div>
+          <p class="rule">Rule <code>npm-token</code> · column 34</p>
+        </div>
+      </details>
+    
+      <details class="finding" data-sev="high" data-rule="dockerfile-secret" data-text="node-api/dockerfile secret baked into a docker image (env/arg)">
+        <summary>
+          <span class="badge high">HIGH</span>
+          <span class="what">
+            <span class="desc">Secret baked into a Docker image (ENV/ARG)</span>
+            <span class="where"><code>node-api/Dockerfile:4</code> <code class="secret" title="Redacted">Ohzs****</code></span>
+          </span>
+          <span class="chev" aria-hidden="true"></span>
+        </summary>
+        <div class="body">
+          
+          
+          <pre class="code" tabindex="0" role="group" aria-label="Code around the finding (secrets redacted)"><span class="ln"><span class="n">1</span>FROM node:22-alpine</span><span class="ln"><span class="n">2</span>ENV NODE_ENV=production</span><span class="ln"><span class="n">3</span>ARG NPM_TOKEN</span><span class="ln hit"><span class="n">4</span><span class="sr-only">Flagged line: </span>ENV DATABASE_PASSWORD=Ohzs****</span><span class="ln"><span class="n">5</span>CMD [&#34;node&#34;, &#34;server.js&#34;]</span></pre>
+          
+          <div class="fix"><h3>How to fix</h3><p>ENV and ARG values are stored in the image layers and visible to anyone who can pull the image (docker history). Pass secrets at runtime (docker run -e / orchestrator secrets) or use BuildKit `--mount=type=secret` for build-time secrets, then rotate this one.</p></div>
+          <p class="rule">Rule <code>dockerfile-secret</code> · column 23</p>
+        </div>
+      </details>
+    
+      <details class="finding" data-sev="high" data-rule="jwt-hardcoded-secret" data-text="node-api/src/auth.js hardcoded jwt signing secret (node.js)">
+        <summary>
+          <span class="badge high">HIGH</span>
+          <span class="what">
+            <span class="desc">Hardcoded JWT signing secret (Node.js)</span>
+            <span class="where"><code>node-api/src/auth.js:3</code> <code class="secret" title="Redacted">j9mD****</code></span>
+          </span>
+          <span class="chev" aria-hidden="true"></span>
+        </summary>
+        <div class="body">
+          
+          
+          <pre class="code" tabindex="0" role="group" aria-label="Code around the finding (secrets redacted)"><span class="ln"><span class="n">1</span>const jwt = require(&#39;jsonwebtoken&#39;);</span><span class="ln"><span class="n">2</span>const secret = process.env.JWT_SECRET;</span><span class="ln hit"><span class="n">3</span><span class="sr-only">Flagged line: </span>exports.login = (user) =&gt; jwt.sign({ id: user.id }, &#34;j9mD****&#34;, { expiresIn: &#39;1h&#39; });</span><span class="ln"><span class="n">4</span>exports.check = (t) =&gt; jwt.verify(t, secret);</span></pre>
+          
+          <div class="fix"><h3>How to fix</h3><p>Anyone who knows this string can forge login tokens for any user. Read it from process.env (e.g. JWT_SECRET), generate a long random value, and rotate it — which logs everyone out.</p></div>
+          <p class="rule">Rule <code>jwt-hardcoded-secret</code> · column 54</p>
         </div>
       </details>
     
@@ -336,6 +450,63 @@ h1 { margin: 6px 0 16px; font-size: 1.6rem; letter-spacing: -.01em; }
         </div>
       </details>
     
+      <details class="finding" data-sev="medium" data-rule="generic-secret" data-text="django-app/settings.py hardcoded secret in assignment">
+        <summary>
+          <span class="badge medium">MEDIUM</span>
+          <span class="what">
+            <span class="desc">Hardcoded secret in assignment</span>
+            <span class="where"><code>django-app/settings.py:2</code> <code class="secret" title="Redacted">L2XC****</code></span>
+          </span>
+          <span class="chev" aria-hidden="true"></span>
+        </summary>
+        <div class="body">
+          
+          
+          <pre class="code" tabindex="0" role="group" aria-label="Code around the finding (secrets redacted)"><span class="ln"><span class="n">1</span>DEBUG = False</span><span class="ln hit"><span class="n">2</span><span class="sr-only">Flagged line: </span>SECRET_KEY = &#39;L2XC****&#39;</span><span class="ln"><span class="n">3</span>DATABASE_PASSWORD = os.environ[&#39;DATABASE_PASSWORD&#39;]</span></pre>
+          
+          <div class="fix"><h3>How to fix</h3><p>Move the value into an environment variable or a secrets manager and rotate it if it was ever committed.</p></div>
+          <p class="rule">Rule <code>generic-secret</code> · column 15</p>
+        </div>
+      </details>
+    
+      <details class="finding" data-sev="medium" data-rule="config-file-secret" data-text="docker-compose.yml hardcoded secret in config file">
+        <summary>
+          <span class="badge medium">MEDIUM</span>
+          <span class="what">
+            <span class="desc">Hardcoded secret in config file</span>
+            <span class="where"><code>docker-compose.yml:6</code> <code class="secret" title="Redacted">OAZg****</code></span>
+          </span>
+          <span class="chev" aria-hidden="true"></span>
+        </summary>
+        <div class="body">
+          
+          
+          <pre class="code" tabindex="0" role="group" aria-label="Code around the finding (secrets redacted)"><span class="ln"><span class="n">3</span>    image: postgres:16</span><span class="ln"><span class="n">4</span>    environment:</span><span class="ln"><span class="n">5</span>      POSTGRES_USER: app</span><span class="ln hit"><span class="n">6</span><span class="sr-only">Flagged line: </span>      POSTGRES_PASSWORD: OAZg****</span><span class="ln"><span class="n">7</span>  api:</span><span class="ln"><span class="n">8</span>    environment:</span><span class="ln"><span class="n">9</span>      JWT_SECRET: ${JWT_SECRET}</span></pre>
+          
+          <div class="fix"><h3>How to fix</h3><p>Config files (Spring application.properties/yml, docker-compose.yml, Rails database.yml, .ini) usually get committed. Reference an environment variable instead — ${DB_PASSWORD} in Spring/Compose, ENV[&#39;DB_PASSWORD&#39;] in Rails — and rotate the value.</p></div>
+          <p class="rule">Rule <code>config-file-secret</code> · column 26</p>
+        </div>
+      </details>
+    
+      <details class="finding" data-sev="medium" data-rule="config-file-secret" data-text="spring-api/src/main/resources/application.properties hardcoded secret in config file">
+        <summary>
+          <span class="badge medium">MEDIUM</span>
+          <span class="what">
+            <span class="desc">Hardcoded secret in config file</span>
+            <span class="where"><code>spring-api/src/main/resources/application.properties:3</code> <code class="secret" title="Redacted">tJOR****</code></span>
+          </span>
+          <span class="chev" aria-hidden="true"></span>
+        </summary>
+        <div class="body">
+          
+          
+          <pre class="code" tabindex="0" role="group" aria-label="Code around the finding (secrets redacted)"><span class="ln"><span class="n">1</span>spring.datasource.url=jdbc:postgresql://db:5432/app</span><span class="ln"><span class="n">2</span>spring.datasource.username=app</span><span class="ln hit"><span class="n">3</span><span class="sr-only">Flagged line: </span>spring.datasource.password=tJOR****</span><span class="ln"><span class="n">4</span>spring.mail.password=${MAIL_PASSWORD}</span><span class="ln"><span class="n">5</span>spring.security.password-encoder=bcrypt</span></pre>
+          
+          <div class="fix"><h3>How to fix</h3><p>Config files (Spring application.properties/yml, docker-compose.yml, Rails database.yml, .ini) usually get committed. Reference an environment variable instead — ${DB_PASSWORD} in Spring/Compose, ENV[&#39;DB_PASSWORD&#39;] in Rails — and rotate the value.</p></div>
+          <p class="rule">Rule <code>config-file-secret</code> · column 28</p>
+        </div>
+      </details>
+    
       <details class="finding" data-sev="medium" data-rule="google-api-key" data-text="src/firebase.ts google api key">
         <summary>
           <span class="badge medium">MEDIUM</span>
@@ -378,7 +549,7 @@ h1 { margin: 6px 0 16px; font-size: 1.6rem; letter-spacing: -.01em; }
   </section>
   
   <section class="group" data-group="config">
-    <h2>Risky configuration <span class="count">4</span></h2>
+    <h2>Risky configuration <span class="count">8</span></h2>
     <p class="blurb">Setups that leak secrets even when the code itself looks clean.</p>
     <div class="list">
     
@@ -396,6 +567,82 @@ h1 { margin: 6px 0 16px; font-size: 1.6rem; letter-spacing: -.01em; }
           
           <div class="fix"><h3>How to fix</h3><p>Variables with NEXT_PUBLIC_/VITE_/REACT_APP_/EXPO_PUBLIC_ prefixes are baked into the JavaScript bundle that every visitor downloads. Drop the prefix, read it only on the server, and rotate the value.</p></div>
           <p class="rule">Rule <code>secret-in-public-env-var</code> · column 1</p>
+        </div>
+      </details>
+    
+      <details class="finding" data-sev="high" data-rule="firebase-rules-public-write" data-text="angular-app/firestore.rules firebase security rules allow anyone to write">
+        <summary>
+          <span class="badge high">HIGH</span>
+          <span class="what">
+            <span class="desc">Firebase security rules allow anyone to write</span>
+            <span class="where"><code>angular-app/firestore.rules:5</code> <code class="secret" title="Redacted">read, write</code></span>
+          </span>
+          <span class="chev" aria-hidden="true"></span>
+        </summary>
+        <div class="body">
+          
+          
+          <pre class="code" tabindex="0" role="group" aria-label="Code around the finding (secrets redacted)"><span class="ln"><span class="n">2</span>service cloud.firestore {</span><span class="ln"><span class="n">3</span>  match /databases/{database}/documents {</span><span class="ln"><span class="n">4</span>    match /users/{uid} { allow read, write: if request.auth != null &amp;&amp; request.auth.uid == uid; }</span><span class="ln hit"><span class="n">5</span><span class="sr-only">Flagged line: </span>    match /orders/{id} { allow read, write: if true; }</span><span class="ln"><span class="n">6</span>    match /{document=**} { allow read, write: if request.time &lt; timestamp.date(2026, 12, 31); }</span><span class="ln"><span class="n">7</span>  }</span><span class="ln"><span class="n">8</span>}</span></pre>
+          
+          <div class="fix"><h3>How to fix</h3><p>Anyone on the internet can create, change or delete this data with just your public project config. Require auth and ownership, e.g. `allow write: if request.auth != null &amp;&amp; request.auth.uid == userId;`, and test with the Firebase Emulator before deploying.</p></div>
+          <p class="rule">Rule <code>firebase-rules-public-write</code> · column 26</p>
+        </div>
+      </details>
+    
+      <details class="finding" data-sev="high" data-rule="firebase-rules-test-mode" data-text="angular-app/firestore.rules firebase &#34;test mode&#34; rule: database is open until a date">
+        <summary>
+          <span class="badge high">HIGH</span>
+          <span class="what">
+            <span class="desc">Firebase &#34;test mode&#34; rule: database is open until a date</span>
+            <span class="where"><code>angular-app/firestore.rules:6</code></span>
+          </span>
+          <span class="chev" aria-hidden="true"></span>
+        </summary>
+        <div class="body">
+          
+          
+          <pre class="code" tabindex="0" role="group" aria-label="Code around the finding (secrets redacted)"><span class="ln"><span class="n">3</span>  match /databases/{database}/documents {</span><span class="ln"><span class="n">4</span>    match /users/{uid} { allow read, write: if request.auth != null &amp;&amp; request.auth.uid == uid; }</span><span class="ln"><span class="n">5</span>    match /orders/{id} { allow read, write: if true; }</span><span class="ln hit"><span class="n">6</span><span class="sr-only">Flagged line: </span>    match /{document=**} { allow read, write: if request.time &lt; timestamp.date(2026, 12, 31); }</span><span class="ln"><span class="n">7</span>  }</span><span class="ln"><span class="n">8</span>}</span></pre>
+          
+          <div class="fix"><h3>How to fix</h3><p>The default test-mode rule (`if request.time &lt; timestamp.date(...)`) leaves the whole database open to everyone until that date — then breaks your app. Replace it with real auth-based rules before launch.</p></div>
+          <p class="rule">Rule <code>firebase-rules-test-mode</code> · column 28</p>
+        </div>
+      </details>
+    
+      <details class="finding" data-sev="high" data-rule="terraform-state-file" data-text="infra/terraform.tfstate terraform state file in the project">
+        <summary>
+          <span class="badge high">HIGH</span>
+          <span class="what">
+            <span class="desc">Terraform state file in the project</span>
+            <span class="where"><code>infra/terraform.tfstate:3</code></span>
+          </span>
+          <span class="chev" aria-hidden="true"></span>
+        </summary>
+        <div class="body">
+          
+          
+          <pre class="code" tabindex="0" role="group" aria-label="Code around the finding (secrets redacted)"><span class="ln"><span class="n">1</span>{</span><span class="ln"><span class="n">2</span>  &#34;version&#34;: 4,</span><span class="ln hit"><span class="n">3</span><span class="sr-only">Flagged line: </span>  &#34;terraform_version&#34;: &#34;1.9.0&#34;,</span><span class="ln"><span class="n">4</span>  &#34;resources&#34;: []</span><span class="ln"><span class="n">5</span>}</span></pre>
+          
+          <div class="fix"><h3>How to fix</h3><p>terraform.tfstate stores every resource attribute in plain text, including database passwords and keys. Use a remote backend (S3 &#43; encryption, Terraform Cloud, GCS), add *.tfstate* to .gitignore, and rotate secrets if it was ever committed.</p></div>
+          <p class="rule">Rule <code>terraform-state-file</code></p>
+        </div>
+      </details>
+    
+      <details class="finding" data-sev="high" data-rule="secret-in-public-env-var" data-text="vue-app/src/api.js secret-looking variable uses a browser-exposed prefix">
+        <summary>
+          <span class="badge high">HIGH</span>
+          <span class="what">
+            <span class="desc">Secret-looking variable uses a browser-exposed prefix</span>
+            <span class="where"><code>vue-app/src/api.js:1</code> <code class="secret" title="Redacted">VUE_APP_STRIPE_SECRET_KEY</code></span>
+          </span>
+          <span class="chev" aria-hidden="true"></span>
+        </summary>
+        <div class="body">
+          
+          
+          <pre class="code" tabindex="0" role="group" aria-label="Code around the finding (secrets redacted)"><span class="ln hit"><span class="n">1</span><span class="sr-only">Flagged line: </span>const key = process.env.VUE_APP_STRIPE_SECRET_KEY;</span><span class="ln"><span class="n">2</span>const url = process.env.VUE_APP_API_URL;</span></pre>
+          
+          <div class="fix"><h3>How to fix</h3><p>Variables with NEXT_PUBLIC_/VITE_/REACT_APP_/EXPO_PUBLIC_ prefixes are baked into the JavaScript bundle that every visitor downloads. Drop the prefix, read it only on the server, and rotate the value.</p></div>
+          <p class="rule">Rule <code>secret-in-public-env-var</code> · column 25</p>
         </div>
       </details>
     

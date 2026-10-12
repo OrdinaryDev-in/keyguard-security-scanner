@@ -65,18 +65,27 @@ const minRuleEntropy = 2.5
 
 const maxEntropyPerLine = 20
 
-// Line returns non-overlapping hits for one line of text.
-func (d *Detector) Line(line string) []Hit {
+// Line returns non-overlapping hits for one line of text from an unknown
+// file. File-specific rules (Dockerfile, Angular environment, ...) are skipped;
+// scanners should use LineIn.
+func (d *Detector) Line(line string) []Hit { return d.LineIn("", line) }
+
+// LineIn returns non-overlapping hits for one line of the file at rel
+// (slash-separated, relative to the scan root).
+func (d *Detector) LineIn(rel, line string) []Hit {
 	if strings.Contains(line, IgnoreMarker) {
 		return nil
 	}
-	return d.find(line)
+	return d.find(rel, line)
 }
 
-func (d *Detector) find(line string) []Hit {
+func (d *Detector) find(rel, line string) []Hit {
 	lower := strings.ToLower(line)
 	var hits []Hit
 	for i, r := range d.Rules {
+		if !r.AppliesTo(rel) {
+			continue
+		}
 		for _, m := range r.Find(line, lower) {
 			// "sk_live_xxxxxxxxxxxxxxxx" matches the Stripe regex but is a
 			// docs placeholder. Real keys are random; placeholders repeat.
@@ -128,15 +137,20 @@ func dedupe(hits []Hit) []Hit {
 	return kept
 }
 
-// RedactLine masks every secret on a line so it can be shown as context.
+// RedactLine masks every secret on a line from an unknown file; see RedactLineIn.
+func (d *Detector) RedactLine(line string) string { return d.RedactLineIn("", line) }
+
+// RedactLineIn masks every secret on a line of the file at rel so it can be
+// shown as context. File-specific rules count too: an unquoted password in
+// application.properties is masked even though no generic rule sees it.
 // It ignores the ignore marker: an allowlisted secret is still never printed.
-func (d *Detector) RedactLine(line string) string {
+func (d *Detector) RedactLineIn(rel, line string) string {
 	// The body of a PEM private key is bare base64 lines that no rule matches
 	// on their own (only the BEGIN header does). Never echo such a blob.
 	if t := strings.TrimSpace(line); len(t) >= 40 && base64Blob.MatchString(t) {
 		return "[redacted base64 block]"
 	}
-	hits := d.find(line)
+	hits := d.find(rel, line)
 	for i := len(hits) - 1; i >= 0; i-- { // right-to-left keeps offsets valid
 		h := hits[i]
 		line = line[:h.Start] + finding.Redact(h.Secret) + line[h.End:]

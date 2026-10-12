@@ -177,10 +177,10 @@ func (p *parser) line(l string) {
 		content := l[1:]
 		// History runs secret rules only, not checks.Line: config smells in
 		// old commits are noise, but a leaked value there is still live.
-		for _, h := range p.det.Line(content) {
+		for _, h := range p.det.LineIn(p.file, content) {
 			f := h.Finding(finding.SourceHistory, p.file, p.lineNo)
 			f.Fix += " Removing it in a new commit is not enough: it stays in history until rewritten."
-			f.Context = []finding.ContextLine{{Number: p.lineNo, Text: p.det.RedactLine(content), Hit: true}}
+			f.Context = []finding.ContextLine{{Number: p.lineNo, Text: p.det.RedactLineIn(p.file, content), Hit: true}}
 			p.record(f, h.Secret)
 		}
 		p.lineNo++

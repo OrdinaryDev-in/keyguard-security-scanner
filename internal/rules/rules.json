@@ -164,6 +164,73 @@
       "fix": "Change the database password, then read the full URL from an environment variable (DATABASE_URL)."
     },
     {
+      "id": "npm-token",
+      "kind": "pattern",
+      "description": "npm access token",
+      "severity": "high",
+      "keywords": ["npm_"],
+      "regex": "\\b(npm_[A-Za-z0-9]{36})\\b",
+      "secret_group": 1,
+      "fix": "Anyone with this token can publish packages as you. Revoke it at npmjs.com → Access Tokens, then use a granular token stored in CI secrets (and keep .npmrc tokens as ${NPM_TOKEN})."
+    },
+    {
+      "id": "firebase-service-account",
+      "kind": "pattern",
+      "description": "Firebase / Google Cloud service account key file",
+      "severity": "high",
+      "keywords": ["service_account"],
+      "regex": "\\\"type\\\"\\s*:\\s*\\\"(service_account)\\\"",
+      "secret_group": 1,
+      "fix": "A service account key gives admin access to your Firebase/GCP project and bypasses Security Rules. Delete the key in Google Cloud Console → IAM → Service Accounts, remove the file, and use Application Default Credentials or a secrets manager instead."
+    },
+    {
+      "id": "jwt-hardcoded-secret",
+      "kind": "pattern",
+      "description": "Hardcoded JWT signing secret (Node.js)",
+      "severity": "high",
+      "keywords": ["jwt."],
+      "regex": "(?i)\\bjwt\\.(?:sign|verify)\\s*\\(\\s*[^,]+,\\s*['\\\"`]([^'\\\"`]{6,})['\\\"`]",
+      "secret_group": 1,
+      "validators": ["not-placeholder"],
+      "fix": "Anyone who knows this string can forge login tokens for any user. Read it from process.env (e.g. JWT_SECRET), generate a long random value, and rotate it — which logs everyone out."
+    },
+    {
+      "id": "angular-environment-secret",
+      "kind": "pattern",
+      "description": "Secret in Angular environment file (bundled into the browser)",
+      "severity": "high",
+      "files": ["environments/environment*.ts"],
+      "keywords": ["secret", "private", "passw", "admin", "service"],
+      "regex": "(?i)\\b\\w*(?:secret|private|passw(?:or)?d|admin_?key|service_?account|service_?key)\\w*\\s*:\\s*['\\\"`]([^'\\\"`]{4,})['\\\"`]",
+      "secret_group": 1,
+      "validators": ["not-placeholder"],
+      "fix": "Everything in environment.ts — including environment.prod.ts — is compiled into the JavaScript every visitor downloads. Public config (Firebase apiKey, project IDs) is fine; secrets must move to a backend (Cloud Function / API) and be rotated."
+    },
+    {
+      "id": "dockerfile-secret",
+      "kind": "pattern",
+      "description": "Secret baked into a Docker image (ENV/ARG)",
+      "severity": "high",
+      "files": ["Dockerfile", "Dockerfile.*", "*.Dockerfile", "*.dockerfile", "Containerfile"],
+      "keywords": ["env", "arg"],
+      "regex": "(?i)^\\s*(?:ENV|ARG)\\s+[A-Z0-9_]*(?:SECRET|PASSWORD|PASSWD|TOKEN|API_?KEY|PRIVATE_?KEY|ACCESS_?KEY|CREDENTIALS?)[A-Z0-9_]*\\s*[= ]\\s*[\\\"']?([^\\s\\\"'$]{4,})",
+      "secret_group": 1,
+      "validators": ["not-placeholder"],
+      "fix": "ENV and ARG values are stored in the image layers and visible to anyone who can pull the image (docker history). Pass secrets at runtime (docker run -e / orchestrator secrets) or use BuildKit `--mount=type=secret` for build-time secrets, then rotate this one."
+    },
+    {
+      "id": "config-file-secret",
+      "kind": "pattern",
+      "description": "Hardcoded secret in config file",
+      "severity": "medium",
+      "files": ["*.properties", "*.yml", "*.yaml", "*.toml", "*.ini", "*.conf", "*.cfg"],
+      "keywords": ["passw", "pwd", "secret", "token", "key", "credential"],
+      "regex": "(?i)^\\s*-?\\s*[\\\"']?[\\w.\\-]*(?:password|passwd|pwd|secret|token|api[_-]?key|access[_-]?key|private[_-]?key|credentials?)[\\w.\\-]*[\\\"']?\\s*[:=]\\s*[\\\"']?([^\\s\\\"'#,]{6,})",
+      "secret_group": 1,
+      "validators": ["not-placeholder", "has-digit-or-symbol"],
+      "fix": "Config files (Spring application.properties/yml, docker-compose.yml, Rails database.yml, .ini) usually get committed. Reference an environment variable instead — ${DB_PASSWORD} in Spring/Compose, ENV['DB_PASSWORD'] in Rails — and rotate the value."
+    },
+    {
       "id": "generic-secret",
       "kind": "pattern",
       "description": "Hardcoded secret in assignment",
@@ -201,6 +268,34 @@
       "description": "Debug mode enabled in a production config file",
       "severity": "low",
       "fix": "Debug output can leak stack traces, env values and internal paths. Disable it for production."
+    },
+    {
+      "id": "firebase-rules-public-write",
+      "kind": "config",
+      "description": "Firebase security rules allow anyone to write",
+      "severity": "high",
+      "fix": "Anyone on the internet can create, change or delete this data with just your public project config. Require auth and ownership, e.g. `allow write: if request.auth != null && request.auth.uid == userId;`, and test with the Firebase Emulator before deploying."
+    },
+    {
+      "id": "firebase-rules-public-read",
+      "kind": "config",
+      "description": "Firebase security rules allow anyone to read",
+      "severity": "medium",
+      "fix": "Unless this data is meant to be fully public, require auth: `allow read: if request.auth != null;`. Anyone with your (public) Firebase config can read everything this rule covers."
+    },
+    {
+      "id": "firebase-rules-test-mode",
+      "kind": "config",
+      "description": "Firebase \"test mode\" rule: database is open until a date",
+      "severity": "high",
+      "fix": "The default test-mode rule (`if request.time < timestamp.date(...)`) leaves the whole database open to everyone until that date — then breaks your app. Replace it with real auth-based rules before launch."
+    },
+    {
+      "id": "terraform-state-file",
+      "kind": "config",
+      "description": "Terraform state file in the project",
+      "severity": "high",
+      "fix": "terraform.tfstate stores every resource attribute in plain text, including database passwords and keys. Use a remote backend (S3 + encryption, Terraform Cloud, GCS), add *.tfstate* to .gitignore, and rotate secrets if it was ever committed."
     },
     {
       "id": "env-file-committed",

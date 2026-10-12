@@ -29,6 +29,15 @@ var validators = map[string]validatorFactory{
 		}
 		return func(s string) bool { return entropy.IsRandom(s, threshold) }, nil
 	},
+	// Unquoted config values ("password: bcrypt", "secretName: my-tls-cert")
+	// are often names, not secrets. Real passwords and keys almost always
+	// contain a digit or a symbol; - _ . / : are excluded because names use them.
+	"has-digit-or-symbol": func(arg string) (func(string) bool, error) {
+		if arg != "" {
+			return nil, fmt.Errorf("takes no argument")
+		}
+		return func(s string) bool { return strings.ContainsAny(s, "0123456789!@#$%^&*+=?~|") }, nil
+	},
 	"jwt-role": func(arg string) (func(string) bool, error) {
 		roles, err := roleList(arg)
 		if err != nil {

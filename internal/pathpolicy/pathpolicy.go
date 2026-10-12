@@ -16,6 +16,7 @@ var skipDirs = map[string]bool{
 	".next": true, ".nuxt": true, ".svelte-kit": true, ".turbo": true, ".vercel": true,
 	".expo": true, "coverage": true, "out": true, "__pycache__": true, ".venv": true,
 	"venv": true, "target": true, "Pods": true, ".gradle": true, ".idea": true,
+	".terraform": true, ".angular": true, ".dart_tool": true,
 }
 
 // Files whose contents are full of hashes that look random but are public.

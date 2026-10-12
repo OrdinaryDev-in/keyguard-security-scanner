@@ -10,24 +10,27 @@ A single Go binary with zero dependencies. It scans your files *and* your git hi
 <sub>All keys in the demo are fake, generated at runtime. Re-record with `make demo-gif` (needs [VHS](https://github.com/charmbracelet/vhs)).</sub>
 
 ```
-$ make demo        # generates a deliberately vulnerable app (fake keys) and scans it
+$ make demo        # generates a deliberately vulnerable multi-stack app (fake keys) and scans it
 
-Secrets in code (10)
-  HIGH    OpenAI API key                           .env.example:2  sk-p****
-  HIGH    AWS access key ID                        config/aws.js:3  AKIA****
-  HIGH    Private key                              keys/id_rsa:1  ----****
-  HIGH    Password in database connection string   scripts/deploy.sh:2  uCQp****
-  HIGH    Stripe live secret/restricted key        src/lib/stripe.ts:4  sk_l****
-  HIGH    Supabase service_role JWT                src/lib/supabase-admin.ts:2  eyJh****
-  MEDIUM  Google API key                           src/firebase.ts:2  AIza****
+Secrets in code (19)
+  HIGH    Secret in Angular environment file (bundled into the browser)  angular-app/src/environments/environment.prod.ts:5  IfsO****
+  HIGH    AWS access key ID                                              config/aws.js:3  AKIA****
+  HIGH    Firebase / Google Cloud service account key file               firebase-admin.json:2  serv****
+  HIGH    Secret baked into a Docker image (ENV/ARG)                     node-api/Dockerfile:4  Ohzs****
+  HIGH    Hardcoded JWT signing secret (Node.js)                         node-api/src/auth.js:3  j9mD****
+  HIGH    Stripe live secret/restricted key                              src/lib/stripe.ts:4  sk_l****
+  HIGH    Supabase service_role JWT                                      src/lib/supabase-admin.ts:2  eyJh****
+  MEDIUM  Hardcoded secret in config file                                spring-api/src/main/resources/application.properties:3  tJOR****
   ...
 
-Risky configuration (4)
-  HIGH    Secret-looking variable uses a browser-exposed prefix .env.local:2  NEXT_PUBLIC_STRIPE_SECRET_KEY
-  MEDIUM  Supabase admin key referenced in client-side code app/dashboard/page.tsx:5  SUPABASE_SERVICE_ROLE_KEY
+Risky configuration (8)
+  HIGH    Secret-looking variable uses a browser-exposed prefix               .env.local:2  NEXT_PUBLIC_STRIPE_SECRET_KEY
+  HIGH    Firebase security rules allow anyone to write                       angular-app/firestore.rules:5  read, write
+  HIGH    Firebase "test mode" rule: database is open until a date            angular-app/firestore.rules:6
+  HIGH    Terraform state file in the project                                 infra/terraform.tfstate:3
   ...
 
-✖ 14 findings: 9 high, 4 medium, 1 low (15 files, 11ms)
+✖ 27 findings: 19 high, 7 medium, 1 low (26 files, 13ms)
 
 $ keyguard scan . --history     # a key committed, then "deleted" in a later commit
 Secrets in git history (1)
@@ -43,10 +46,27 @@ Exit code `1` when anything at or above `--fail-on` (default `high`) is found, s
 
 | Category | Examples |
 |---|---|
-| **Known key formats** (17 rules) | AWS, GitHub, Stripe (live/test), OpenAI, Anthropic, Slack, SendGrid, Supabase (`sb_secret_`, `service_role` JWTs; `anon` keys are correctly ignored), Google/Firebase, private keys, passwords in DB URLs, `secret = "..."` assignments |
+| **Known key formats** (works in any language) | AWS, GitHub, Stripe (live/test), OpenAI, Anthropic, Slack, SendGrid, npm tokens, Supabase (`sb_secret_`, `service_role` JWTs; `anon` keys are correctly ignored), Google/Firebase API keys, Firebase/GCP service-account JSON, private keys, passwords in DB URLs, `secret = "..."` assignments |
 | **Unknown secrets** | Shannon-entropy detection of random-looking quoted strings |
-| **Risky config** | `NEXT_PUBLIC_`/`VITE_`/`REACT_APP_`/`EXPO_PUBLIC_` vars named like secrets · `.env` not gitignored or already committed · Supabase admin key used in `"use client"` code · `debug: true` in prod config |
 | **Git history** | Secrets in *any* past commit on *any* branch, including ones "deleted" later, with the commit that introduced them |
+
+### Stack-specific checks
+
+Secret formats are the same in every language. What differs per stack is *how* secrets leak, so keyguard has checks for each:
+
+| Stack | What it checks |
+|---|---|
+| **Next.js / React / Vite / Vue / Nuxt / SvelteKit / Expo / Angular (ngx-env)** | Secret-named vars with a browser-exposed prefix (`NEXT_PUBLIC_`, `VITE_`, `REACT_APP_`, `VUE_APP_`, `NUXT_PUBLIC_`, `PUBLIC_`, `EXPO_PUBLIC_`, `NG_APP_`, `GATSBY_`) |
+| **Angular** | Secrets in `environments/environment*.ts`, which is compiled into the browser bundle (public config like the Firebase `apiKey` is allowed) |
+| **Firebase / Firestore** | Security rules open to everyone (`allow read, write: if true;`), leftover **test-mode** rules (`request.time < timestamp.date(...)`), open Realtime Database rules, committed service-account key files |
+| **Supabase** | `service_role` / secret key referenced in `"use client"` code; `service_role` JWTs anywhere |
+| **Node.js / Express** | Hardcoded `jwt.sign/verify` secrets, npm tokens in `.npmrc` |
+| **Java / Spring, Rails, Python, docker-compose** | Unquoted secrets in `application.properties`/`.yml`, `.yaml`, `.toml`, `.ini`, `.conf` (`${ENV}` references are fine) |
+| **Docker** | Secrets baked into image layers via `ENV`/`ARG` in a `Dockerfile` |
+| **Terraform** | `*.tfstate` files in the project (they hold every secret in plain text) |
+| **Any project** | `.env` not gitignored or already committed · `debug: true` in prod config |
+
+Stack rules are plain data in [`internal/rules/rules.json`](internal/rules/rules.json): a regex, validators, and a `files` glob limiting where the rule runs. Adding a stack is usually one JSON entry plus a fixture sample.
 
 Run `keyguard rules` for the full list.
 
@@ -113,7 +133,7 @@ See [`docs/github-action.yml`](docs/github-action.yml): it fails the build on a 
 ```
 cmd/keyguard            CLI, flags, exit codes
 internal/
-  rules       rule catalogue (embedded rules.json): 17 regex rules + named
+  rules       rule catalogue (embedded rules.json): 23 regex rules + named
               validators (RE2 → linear-time, ReDoS-safe), plus metadata for every check
   entropy     Shannon entropy with length-scaled thresholds
   detect      rules + entropy per line, overlap de-dupe, redaction
@@ -138,7 +158,7 @@ make self-scan  # keyguard must pass on its own source
 
 ## Compared to gitleaks / trufflehog
 
-Use them for production. They have hundreds of rules, and trufflehog verifies keys live against provider APIs. keyguard is smaller and opinionated toward the Next.js/Supabase/Vercel stack: it checks *configuration* mistakes (public env prefixes, service-role keys in client components, un-ignored `.env`) that pure secret scanners don't, and ships a readable HTML report.
+Use them for production secret scanning. They have hundreds of key formats, and trufflehog verifies keys live against provider APIs. keyguard has fewer key formats but goes further on **configuration mistakes** that pure secret scanners don't look for: public env prefixes, Angular environment files, open Firebase rules, secrets baked into Docker images, Terraform state, un-ignored `.env`. It also ships a readable HTML report. A sensible setup is to run both.
 
 ## License
 

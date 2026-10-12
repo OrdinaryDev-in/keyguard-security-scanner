@@ -17,6 +17,7 @@ My first Go project: a secret scanner I can put in front of my own deploys. Buil
 | [09](devlog/09-security-review.md) | Security review | Scanning an untrusted repo could execute code via git textconv |
 | [10](devlog/10-refactor.md) | Refactor | One embedded rule catalogue, and channels instead of a happens-before proof |
 | [11](devlog/11-no-silent-gaps.md) | No silent gaps | A ✔ that means "I didn't look" is the worst bug a scanner can have |
+| [12](devlog/12-more-stacks.md) | More stacks | Secrets look the same everywhere; how they leak is what's stack-specific |
 
 ## Top 5 lessons
 

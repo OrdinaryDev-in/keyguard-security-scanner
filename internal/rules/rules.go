@@ -12,6 +12,7 @@
 package rules
 
 import (
+	"path"
 	"regexp"
 	"strings"
 
@@ -54,6 +55,45 @@ type Rule struct {
 	SecretGroup int
 	// Validate rejects regex matches that aren't real secrets. Optional.
 	Validate func(secret string) bool
+	// Files limits the rule to matching paths (globs). Empty = every file.
+	// This is how stack-specific rules work: a Dockerfile rule only runs on
+	// Dockerfiles, an Angular rule only on environments/environment*.ts.
+	Files []string
+}
+
+// AppliesTo reports whether the rule runs on the file at rel (slash-separated).
+// A glob without "/" matches the file name; one with "/" matches the end of
+// the path at a directory boundary, so "environments/environment*.ts"
+// matches "src/environments/environment.prod.ts". rel == "" (unknown file)
+// matches only unrestricted rules.
+func (r *Rule) AppliesTo(rel string) bool {
+	if len(r.Files) == 0 {
+		return true
+	}
+	if rel == "" {
+		return false
+	}
+	for _, g := range r.Files {
+		if MatchFile(g, rel) {
+			return true
+		}
+	}
+	return false
+}
+
+// MatchFile matches one Files glob against a path; see AppliesTo.
+func MatchFile(glob, rel string) bool {
+	if !strings.Contains(glob, "/") {
+		ok, _ := path.Match(glob, path.Base(rel))
+		return ok
+	}
+	parts := strings.Split(rel, "/")
+	for i := range parts {
+		if ok, _ := path.Match(glob, strings.Join(parts[i:], "/")); ok {
+			return true
+		}
+	}
+	return false
 }
 
 // Match is one rule firing on one line.

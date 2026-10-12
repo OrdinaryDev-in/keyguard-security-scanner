@@ -75,6 +75,8 @@ var referencedIDs = []string{
 	"high-entropy-string", "secret-in-public-env-var", "supabase-admin-key-in-client",
 	"debug-in-production-config", "env-file-committed", "env-file-not-ignored",
 	"env-file-in-history", "too-many-findings",
+	"firebase-rules-public-write", "firebase-rules-public-read", "firebase-rules-test-mode",
+	"terraform-state-file",
 }
 
 func TestReferencedIDsExist(t *testing.T) {
@@ -88,8 +90,8 @@ func TestBuiltinLoads(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(cat.Patterns) != 17 {
-		t.Errorf("want 17 pattern rules (README says so), got %d", len(cat.Patterns))
+	if len(cat.Patterns) != 23 {
+		t.Errorf("want 23 pattern rules (README says so), got %d", len(cat.Patterns))
 	}
 	if len(cat.All()) != len(cat.Patterns)+len(referencedIDs) {
 		t.Errorf("catalogue has %d rules; is a non-pattern rule unused?", len(cat.All()))
@@ -114,6 +116,8 @@ func TestLoadRejects(t *testing.T) {
 		{"bad validator arg", rule(`"regex": "a", "validators": ["min-entropy:high"]`), "min-entropy"},
 		{"unknown field", rule(`"regex": "a", "secret_grop": 1`), "unknown field"},
 		{"bad severity", `{"rules": [{"id": "a", "kind": "limit", "description": "d", "severity": "urgent", "fix": "f"}]}`, "unknown severity"},
+		{"bad files glob", rule(`"regex": "a", "files": ["[x"]`), "files glob"},
+		{"files on config rule", `{"rules": [{"id": "a", "kind": "config", "description": "d", "severity": "low", "fix": "f", "files": ["*.yml"]}]}`, "only pattern rules"},
 		{"regex on config rule", `{"rules": [{"id": "a", "kind": "config", "description": "d", "severity": "low", "fix": "f", "regex": "a"}]}`, "only pattern rules"},
 	}
 	for _, tt := range tests {
@@ -136,6 +140,24 @@ func TestValidatorsCombine(t *testing.T) {
 	for line, want := range map[string]bool{"=Xk9vQ2mLp7Rt": true, "=your-key-here-x": false, "=aaaaaaaaaaaa": false} {
 		if got := len(r.Find(line, strings.ToLower(line))) > 0; got != want {
 			t.Errorf("%q matched=%v, want %v", line, got, want)
+		}
+	}
+}
+
+func TestMatchFile(t *testing.T) {
+	for _, tt := range []struct {
+		glob, rel string
+		want      bool
+	}{
+		{"Dockerfile", "services/api/Dockerfile", true},
+		{"Dockerfile.*", "Dockerfile.prod", true},
+		{"*.yml", "deploy/k8s/app.yml", true},
+		{"environments/environment*.ts", "src/environments/environment.prod.ts", true},
+		{"environments/environment*.ts", "src/myenvironments/environment.ts", false},
+		{"environments/environment*.ts", "environment.ts", false},
+	} {
+		if got := MatchFile(tt.glob, tt.rel); got != tt.want {
+			t.Errorf("MatchFile(%q, %q) = %v, want %v", tt.glob, tt.rel, got, tt.want)
 		}
 	}
 }

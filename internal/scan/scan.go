@@ -198,7 +198,7 @@ func Content(det *detect.Detector, rel string, data []byte, contextLines int, cl
 	for sc.Scan() {
 		lines = append(lines, sc.Text())
 	}
-	ctx := newContexter(det, lines, contextLines)
+	ctx := newContexter(det, rel, lines, contextLines)
 	var out []finding.Finding
 	for i, line := range lines {
 		if len(out) >= maxFindingsPerFile {
@@ -210,7 +210,7 @@ func Content(det *detect.Detector, rel string, data []byte, contextLines int, cl
 		if strings.Contains(line, detect.IgnoreMarker) {
 			continue
 		}
-		for _, h := range det.Line(line) {
+		for _, h := range det.LineIn(rel, line) {
 			f := h.Finding(finding.SourceCode, rel, i+1)
 			f.Context = ctx.around(i)
 			out = append(out, f)
@@ -229,14 +229,15 @@ const maxContextWidth = 200
 // once per file (re-running detection per finding was quadratic).
 type contexter struct {
 	det      *detect.Detector
+	rel      string // file-specific rules also decide what gets masked
 	lines    []string
 	n        int
 	redacted map[int]string
 	inKey    []bool // line is inside a PEM private-key block
 }
 
-func newContexter(det *detect.Detector, lines []string, n int) *contexter {
-	c := &contexter{det: det, lines: lines, n: n, redacted: map[int]string{}, inKey: make([]bool, len(lines))}
+func newContexter(det *detect.Detector, rel string, lines []string, n int) *contexter {
+	c := &contexter{det: det, rel: rel, lines: lines, n: n, redacted: map[int]string{}, inKey: make([]bool, len(lines))}
 	// Only the BEGIN line matches a rule; the key body below it, in whatever
 	// shape (bare base64, "...\n" + string concatenation, YAML), must never be shown.
 	in := false
@@ -263,7 +264,7 @@ func (c *contexter) line(i int) string {
 	if c.inKey[i] {
 		t = "[redacted private key]"
 	} else {
-		t = c.det.RedactLine(c.lines[i])
+		t = c.det.RedactLineIn(c.rel, c.lines[i])
 		if r := []rune(t); len(r) > maxContextWidth { // cut on runes, not bytes, to keep UTF-8 valid
 			t = string(r[:maxContextWidth]) + "…"
 		}
