@@ -15,12 +15,12 @@ import (
 	"strconv"
 	"strings"
 
-	"keyguard/internal/detect"
-	"keyguard/internal/finding"
-	"keyguard/internal/gitcmd"
-	"keyguard/internal/ignore"
-	"keyguard/internal/pathpolicy"
-	"keyguard/internal/rules"
+	"github.com/OrdinaryDev-in/keyguard-security-scanner/internal/detect"
+	"github.com/OrdinaryDev-in/keyguard-security-scanner/internal/finding"
+	"github.com/OrdinaryDev-in/keyguard-security-scanner/internal/gitcmd"
+	"github.com/OrdinaryDev-in/keyguard-security-scanner/internal/ignore"
+	"github.com/OrdinaryDev-in/keyguard-security-scanner/internal/pathpolicy"
+	"github.com/OrdinaryDev-in/keyguard-security-scanner/internal/rules"
 )
 
 type Options struct {

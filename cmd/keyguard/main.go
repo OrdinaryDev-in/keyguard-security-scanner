@@ -14,11 +14,11 @@ import (
 	"text/tabwriter"
 	"time"
 
-	"keyguard/internal/finding"
-	"keyguard/internal/gitscan"
-	"keyguard/internal/report"
-	"keyguard/internal/rules"
-	"keyguard/internal/scan"
+	"github.com/OrdinaryDev-in/keyguard-security-scanner/internal/finding"
+	"github.com/OrdinaryDev-in/keyguard-security-scanner/internal/gitscan"
+	"github.com/OrdinaryDev-in/keyguard-security-scanner/internal/report"
+	"github.com/OrdinaryDev-in/keyguard-security-scanner/internal/rules"
+	"github.com/OrdinaryDev-in/keyguard-security-scanner/internal/scan"
 )
 
 const version = "0.1.0"

@@ -14,12 +14,12 @@ import (
 	"sync"
 	"time"
 
-	"keyguard/internal/checks"
-	"keyguard/internal/detect"
-	"keyguard/internal/finding"
-	"keyguard/internal/ignore"
-	"keyguard/internal/pathpolicy"
-	"keyguard/internal/rules"
+	"github.com/OrdinaryDev-in/keyguard-security-scanner/internal/checks"
+	"github.com/OrdinaryDev-in/keyguard-security-scanner/internal/detect"
+	"github.com/OrdinaryDev-in/keyguard-security-scanner/internal/finding"
+	"github.com/OrdinaryDev-in/keyguard-security-scanner/internal/ignore"
+	"github.com/OrdinaryDev-in/keyguard-security-scanner/internal/pathpolicy"
+	"github.com/OrdinaryDev-in/keyguard-security-scanner/internal/rules"
 )
 
 type Options struct {

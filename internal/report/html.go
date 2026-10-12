@@ -7,7 +7,7 @@ import (
 	"sort"
 	"strings"
 
-	"keyguard/internal/finding"
+	"github.com/OrdinaryDev-in/keyguard-security-scanner/internal/finding"
 )
 
 // go:embed bakes these files into the compiled binary, so `keyguard` is a

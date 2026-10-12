@@ -47,11 +47,11 @@ Run `keyguard rules` for the full list.
 ## Install
 
 ```bash
-git clone <this repo> && cd keyguard
-make build && ./bin/keyguard version
+go install github.com/OrdinaryDev-in/keyguard-security-scanner/cmd/keyguard@latest
+keyguard version
 ```
 
-(To make `go install github.com/<you>/keyguard/cmd/keyguard@latest` work, change the module path in `go.mod` to your GitHub repo path first.)
+Or from a clone: `make build && ./bin/keyguard version`.
 
 ## Usage
 

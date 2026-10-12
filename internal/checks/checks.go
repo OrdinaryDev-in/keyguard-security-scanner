@@ -15,8 +15,8 @@ import (
 	"regexp"
 	"strings"
 
-	"keyguard/internal/finding"
-	"keyguard/internal/rules"
+	"github.com/OrdinaryDev-in/keyguard-security-scanner/internal/finding"
+	"github.com/OrdinaryDev-in/keyguard-security-scanner/internal/rules"
 )
 
 // Framework prefixes that get inlined into the browser bundle.

@@ -12,9 +12,9 @@ import (
 	"testing"
 	"time"
 
-	"keyguard/internal/detect"
-	"keyguard/internal/fixture"
-	"keyguard/internal/pathpolicy"
+	"github.com/OrdinaryDev-in/keyguard-security-scanner/internal/detect"
+	"github.com/OrdinaryDev-in/keyguard-security-scanner/internal/fixture"
+	"github.com/OrdinaryDev-in/keyguard-security-scanner/internal/pathpolicy"
 )
 
 func newDetector(t *testing.T) *detect.Detector {

@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"os"
 
-	"keyguard/internal/fixture"
+	"github.com/OrdinaryDev-in/keyguard-security-scanner/internal/fixture"
 )
 
 func main() {

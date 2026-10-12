@@ -9,7 +9,7 @@ import (
 	"strings"
 	"testing"
 
-	"keyguard/internal/fixture"
+	"github.com/OrdinaryDev-in/keyguard-security-scanner/internal/fixture"
 )
 
 func TestParseInterleaved(t *testing.T) {

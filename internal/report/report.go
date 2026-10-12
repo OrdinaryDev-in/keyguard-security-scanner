@@ -8,7 +8,7 @@ import (
 	"strings"
 	"time"
 
-	"keyguard/internal/finding"
+	"github.com/OrdinaryDev-in/keyguard-security-scanner/internal/finding"
 )
 
 type Report struct {

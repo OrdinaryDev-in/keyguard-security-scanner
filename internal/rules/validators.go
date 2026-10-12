@@ -8,7 +8,7 @@ import (
 	"strconv"
 	"strings"
 
-	"keyguard/internal/entropy"
+	"github.com/OrdinaryDev-in/keyguard-security-scanner/internal/entropy"
 )
 
 // A validator spec in rules.json is "name" or "name:arg". Each registered

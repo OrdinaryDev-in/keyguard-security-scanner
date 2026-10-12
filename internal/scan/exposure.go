@@ -5,10 +5,10 @@ import (
 	"path/filepath"
 	"strings"
 
-	"keyguard/internal/finding"
-	"keyguard/internal/gitcmd"
-	"keyguard/internal/ignore"
-	"keyguard/internal/rules"
+	"github.com/OrdinaryDev-in/keyguard-security-scanner/internal/finding"
+	"github.com/OrdinaryDev-in/keyguard-security-scanner/internal/gitcmd"
+	"github.com/OrdinaryDev-in/keyguard-security-scanner/internal/ignore"
+	"github.com/OrdinaryDev-in/keyguard-security-scanner/internal/rules"
 )
 
 // envExposure checks whether each dotenv file is protected from being committed.

@@ -19,8 +19,7 @@ jobs:
         with:
           go-version: "1.27"
 
-      # Replace with your published module path once it's on GitHub.
-      - run: go install github.com/YOUR_GITHUB_USER/keyguard/cmd/keyguard@latest
+      - run: go install github.com/OrdinaryDev-in/keyguard-security-scanner/cmd/keyguard@latest
 
       - name: Scan
         run: keyguard scan . --history --format sarif -o keyguard.sarif

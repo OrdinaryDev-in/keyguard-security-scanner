@@ -15,7 +15,7 @@ import (
 	"regexp"
 	"strings"
 
-	"keyguard/internal/finding"
+	"github.com/OrdinaryDev-in/keyguard-security-scanner/internal/finding"
 )
 
 // Kind says which part of keyguard produces a rule's findings.

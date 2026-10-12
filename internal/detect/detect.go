@@ -9,9 +9,9 @@ import (
 	"sort"
 	"strings"
 
-	"keyguard/internal/entropy"
-	"keyguard/internal/finding"
-	"keyguard/internal/rules"
+	"github.com/OrdinaryDev-in/keyguard-security-scanner/internal/entropy"
+	"github.com/OrdinaryDev-in/keyguard-security-scanner/internal/finding"
+	"github.com/OrdinaryDev-in/keyguard-security-scanner/internal/rules"
 )
 
 // IgnoreMarker on a line suppresses every finding on that line.

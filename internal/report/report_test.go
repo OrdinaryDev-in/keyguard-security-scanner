@@ -7,7 +7,7 @@ import (
 	"testing"
 	"time"
 
-	"keyguard/internal/finding"
+	"github.com/OrdinaryDev-in/keyguard-security-scanner/internal/finding"
 )
 
 func sample() *Report {
@@ -141,7 +141,7 @@ func TestSARIFFingerprintsUnique(t *testing.T) {
 	var log sarifLog
 	json.Unmarshal(buf.Bytes(), &log)
 	r := log.Runs[0].Results
-	if r[0].PartialFingerprints["keyguard/v1"] == r[1].PartialFingerprints["keyguard/v1"] {
+	if r[0].PartialFingerprints["github.com/OrdinaryDev-in/keyguard-security-scanner/v1"] == r[1].PartialFingerprints["github.com/OrdinaryDev-in/keyguard-security-scanner/v1"] {
 		t.Error("distinct config findings share a fingerprint")
 	}
 }

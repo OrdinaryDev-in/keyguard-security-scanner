@@ -10,7 +10,7 @@ import (
 	"strings"
 	"sync"
 
-	"keyguard/internal/finding"
+	"github.com/OrdinaryDev-in/keyguard-security-scanner/internal/finding"
 )
 
 //go:embed rules.json

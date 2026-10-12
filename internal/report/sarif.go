@@ -8,7 +8,7 @@ import (
 	"io"
 	"sort"
 
-	"keyguard/internal/finding"
+	"github.com/OrdinaryDev-in/keyguard-security-scanner/internal/finding"
 )
 
 // SARIF (Static Analysis Results Interchange Format) is the JSON format GitHub
@@ -104,7 +104,7 @@ func SARIF(w io.Writer, r *Report) error {
 		results = append(results, sarifResult{
 			RuleID: f.RuleID, Level: level(f.Severity), Message: sarifText{msg},
 			Locations:           []sarifLocation{loc},
-			PartialFingerprints: map[string]string{"keyguard/v1": hex.EncodeToString(sum[:8])},
+			PartialFingerprints: map[string]string{"github.com/OrdinaryDev-in/keyguard-security-scanner/v1": hex.EncodeToString(sum[:8])},
 		})
 	}
 	driver := sarifDriver{Name: r.Tool, Version: r.Version}
