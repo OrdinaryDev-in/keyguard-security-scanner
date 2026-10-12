@@ -1,4 +1,4 @@
-.PHONY: build test race bench vet demo demo-html self-scan clean
+.PHONY: build test race bench vet demo demo-html demo-gif self-scan clean
 
 build:
 	go build -o bin/keyguard ./cmd/keyguard
@@ -23,6 +23,10 @@ demo: build
 demo-html: build
 	rm -rf /tmp/keyguard-demo && go run ./cmd/mkfixture /tmp/keyguard-demo
 	./bin/keyguard scan /tmp/keyguard-demo --format html -o docs/assets/sample-report.html || true
+
+# Needs VHS (brew install vhs). Script: docs/demo.tape
+demo-gif: build
+	vhs docs/demo.tape
 
 # Dogfooding: keyguard must pass on its own source.
 self-scan: build

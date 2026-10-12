@@ -5,6 +5,10 @@
 **Find leaked API keys, secrets and risky config in your app before you deploy it.**
 A single Go binary with zero dependencies. It scans your files *and* your git history, and produces a terminal summary, JSON, SARIF for GitHub code scanning, or a self-contained HTML report.
 
+![keyguard scanning a demo app, then finding a deleted Stripe key in git history](docs/assets/demo.gif)
+
+<sub>All keys in the demo are fake, generated at runtime. Re-record with `make demo-gif` (needs [VHS](https://github.com/charmbracelet/vhs)).</sub>
+
 ```
 $ make demo        # generates a deliberately vulnerable app (fake keys) and scans it
 

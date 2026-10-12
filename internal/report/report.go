@@ -143,9 +143,9 @@ func Text(w io.Writer, r *Report, color bool) error {
 
 	s := r.Summary
 	fmt.Fprintln(w)
-	scope := fmt.Sprintf("%d files", r.FilesScanned)
+	scope := plural(r.FilesScanned, "file", "files")
 	if r.History {
-		scope += fmt.Sprintf(", %d commits", r.Commits)
+		scope += ", " + plural(r.Commits, "commit", "commits")
 	}
 	writeSkipped(w, r, c)
 	if s.Total() == 0 {
@@ -157,11 +157,7 @@ func Text(w io.Writer, r *Report, color bool) error {
 		fmt.Fprintf(w, "%s No secrets or risky config found (%s, %dms)\n", c(green, "✔"), scope, r.DurationMS)
 		return nil
 	}
-	noun := "findings"
-	if s.Total() == 1 {
-		noun = "finding"
-	}
-	fmt.Fprintf(w, "%s %d %s: %s, %s, %s (%s, %dms)\n", c(red, "✖"), s.Total(), noun,
+	fmt.Fprintf(w, "%s %s: %s, %s, %s (%s, %dms)\n", c(red, "✖"), plural(s.Total(), "finding", "findings"),
 		c(red, fmt.Sprintf("%d high", s.High)), c(yellow, fmt.Sprintf("%d medium", s.Medium)),
 		c(cyan, fmt.Sprintf("%d low", s.Low)), scope, r.DurationMS)
 	fmt.Fprintln(w, c(dim, "Tip: --format html -o report.html for a full report with code context and fixes."))
