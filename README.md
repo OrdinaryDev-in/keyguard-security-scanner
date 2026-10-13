@@ -117,6 +117,15 @@ One offline HTML file: summary, severity, rule and text filters, redacted code c
 - Add `keyguard:ignore` in a comment on the line.
 - Add paths to `.keyguardignore` (gitignore syntax) at the project root.
 
+### As a pre-commit hook
+
+```bash
+keyguard install-hook          # in your repo: runs `keyguard scan .` before every commit
+keyguard install-hook --force  # replace an existing pre-commit hook (kept as pre-commit.bak)
+```
+
+The commit is blocked on findings at the default `--fail-on high`. The hook scans the working tree, not just staged changes, and needs `keyguard` on `PATH`. It respects `core.hooksPath` and refuses to overwrite a hook it didn't write. Skip it once with `git commit --no-verify`.
+
 ### In CI
 
 See [`docs/github-action.yml`](docs/github-action.yml): it fails the build on a leak and uploads SARIF so findings appear in the repo's Security tab.
