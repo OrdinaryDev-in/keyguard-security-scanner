@@ -18,6 +18,7 @@ My first Go project: a secret scanner I can put in front of my own deploys. Buil
 | [10](devlog/10-refactor.md) | Refactor | One embedded rule catalogue, and channels instead of a happens-before proof |
 | [11](devlog/11-no-silent-gaps.md) | No silent gaps | A ✔ that means "I didn't look" is the worst bug a scanner can have |
 | [12](devlog/12-more-stacks.md) | More stacks | Secrets look the same everywhere; how they leak is what's stack-specific |
+| [13](devlog/13-install-hook.md) | Pre-commit hook | Writing through a symlinked hook would overwrite someone else's script |
 
 ## Top 5 lessons
 
@@ -34,5 +35,5 @@ After the build I ran three automated reviews (security, code quality, UX/access
 ## Next (v2 ideas)
 
 - Live key verification (opt-in): ask the provider whether a found key is still active.
-- A pre-commit hook installer: `keyguard install-hook`.
+- ~~A pre-commit hook installer: `keyguard install-hook`.~~ Done in [devlog 13](devlog/13-install-hook.md).
 - A dictionary-word check to stop flagging identifiers like `handleOAuth2CallbackV2`.

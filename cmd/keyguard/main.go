@@ -34,6 +34,8 @@ const usage = `keyguard — find leaked secrets and risky config before you depl
 
 Usage:
   keyguard scan [path] [flags]   scan a project (default path: .)
+  keyguard install-hook [path]   add a git pre-commit hook that runs keyguard scan
+                                 (--force replaces an existing hook; see install-hook -h)
   keyguard rules                 list built-in detection rules
   keyguard version
 
@@ -53,6 +55,8 @@ func run(args []string, stdout, stderr io.Writer) int {
 	switch args[0] {
 	case "scan":
 		return runScan(args[1:], stdout, stderr)
+	case "install-hook":
+		return runInstallHook(args[1:], stdout, stderr)
 	case "rules":
 		return runRules(stdout, stderr)
 	case "version", "--version", "-v":
