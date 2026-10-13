@@ -1,6 +1,7 @@
 package detect
 
 import (
+	"math/rand"
 	"strings"
 	"testing"
 )
@@ -80,5 +81,32 @@ func BenchmarkLineNoMatchWithoutKeywords(b *testing.B) {
 	line := `export function formatDate(d: Date): string { return d.toISOString().slice(0, 10); }`
 	for i := 0; i < b.N; i++ {
 		d.Line(line)
+	}
+}
+
+// Entropy is file-aware: backticks are strings in TypeScript, code spans in
+// Markdown. Identifiers are skipped everywhere.
+func TestEntropyBackticksByFile(t *testing.T) {
+	d := newDetector(t)
+	r := rand.New(rand.NewSource(1)) // built at runtime: this file holds no key
+	b := make([]byte, 32)
+	for i := range b {
+		b[i] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789"[r.Intn(62)]
+	}
+	key := string(b)
+	tests := []struct {
+		file, line string
+		want       int
+	}{
+		{"src/api.ts", "const url = `https://api.example.com?k=" + "${id}`; const k = `" + key + "`;", 1},
+		{"docs/devlog/04-entropy.md", "a code span like `handleOAuth2CallbackV2` (22 chars)", 0},
+		{"docs/notes.md", "set `" + key + "` here", 0},
+		{"src/routes.ts", `router.get("/cb", "handleOAuth2CallbackV2")`, 0},
+		{"", "`" + key + "`", 1}, // unknown file: backticks still count
+	}
+	for _, tt := range tests {
+		if got := len(d.LineIn(tt.file, tt.line)); got != tt.want {
+			t.Errorf("LineIn(%q, %q) = %d hits, want %d", tt.file, tt.line, got, tt.want)
+		}
 	}
 }

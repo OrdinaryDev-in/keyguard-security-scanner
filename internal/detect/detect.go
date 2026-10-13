@@ -96,7 +96,7 @@ func (d *Detector) find(rel, line string) []Hit {
 		}
 	}
 	if d.Entropy {
-		toks := entropy.Find(line)
+		toks := entropy.FindIn(rel, line)
 		if len(toks) > maxEntropyPerLine { // bound the O(n²) dedupe on generated lines
 			toks = toks[:maxEntropyPerLine]
 		}

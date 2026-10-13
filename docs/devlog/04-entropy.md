@@ -29,7 +29,7 @@ A scanner that cries wolf gets disabled. What got filtered, in order of how much
 3. **UUIDs**, **SRI hashes** (`sha512-...`), and anything over 120 chars (embedded fonts/images).
 4. Lockfiles skipped entirely.
 
-**Known limitation (found by dogfooding):** backticks count as quotes because JS template strings use them, so in markdown a code span like `` `handleOAuth2CallbackV2` `` (22 chars) still gets flagged. Shorter strings get lower thresholds, which makes them easier to trip. Ideas for v2: a dictionary-word check (identifiers split into English words; keys don't), or only treating backticks as quotes in `.js/.ts` files.
+**Known limitation (found by dogfooding, fixed in [devlog 14](14-identifiers.md)):** backticks counted as quotes in every file because JS template strings use them, so in markdown a code span like `` `handleOAuth2CallbackV2` `` (22 chars) got flagged. Shorter strings get lower thresholds, which makes them easier to trip. Both v2 ideas were built: backticks now only count as quotes in JS/TS and Go files, and a dictionary-word check skips strings made of identifier words.
 
 ## Lesson 3: entropy also kills false positives in regex rules
 

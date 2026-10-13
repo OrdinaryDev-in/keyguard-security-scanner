@@ -11,6 +11,7 @@ package entropy
 
 import (
 	"math"
+	"path"
 	"regexp"
 	"strings"
 )
@@ -49,14 +50,38 @@ const (
 
 // Only look inside quotes. Unquoted identifiers like handleOAuth2CallbackV2
 // are long and mixed-case too, and were the biggest source of false positives.
-var quoted = regexp.MustCompile("[\"'`]([A-Za-z0-9+/=_\\-]{20,})[\"'`]")
+var (
+	quoted           = regexp.MustCompile("[\"'`]([A-Za-z0-9+/=_\\-]{20,})[\"'`]")
+	quotedNoBacktick = regexp.MustCompile(`["']([A-Za-z0-9+/=_\-]{20,})["']`)
+)
+
+// backtickStrings are the file types where `...` is a string literal: JS/TS
+// template strings and Go raw strings. Elsewhere backticks are Markdown code
+// spans, shell command substitution or SQL identifiers, which hold names.
+var backtickStrings = map[string]bool{
+	".js": true, ".jsx": true, ".mjs": true, ".cjs": true,
+	".ts": true, ".tsx": true, ".mts": true, ".cts": true,
+	".vue": true, ".svelte": true, ".astro": true,
+	".go": true,
+}
 
 var uuid = regexp.MustCompile(`^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$`)
 
-// Find returns quoted tokens in line that look like secrets.
-func Find(line string) []Token {
+// Find returns quoted tokens in line, from an unknown file, that look like
+// secrets. Backticks count as quotes; see FindIn.
+func Find(line string) []Token { return FindIn("", line) }
+
+// FindIn returns quoted tokens in a line of the file at rel that look like
+// secrets. Backticks only count as quotes in languages that use them for
+// strings. When the file is unknown (rel == "") they always count: missing a
+// key costs more than an extra finding.
+func FindIn(rel, line string) []Token {
+	re := quoted
+	if rel != "" && !backtickStrings[strings.ToLower(path.Ext(rel))] {
+		re = quotedNoBacktick
+	}
 	var out []Token
-	for _, m := range quoted.FindAllStringSubmatchIndex(line, -1) {
+	for _, m := range re.FindAllStringSubmatchIndex(line, -1) {
 		start, end := m[2], m[3]
 		v := line[start:end]
 		if t, ok := classify(v); ok {
@@ -116,6 +141,10 @@ func classify(v string) (Token, bool) {
 		threshold = math.Min(4.5, 0.85*maxPossible)
 	}
 	if h < threshold {
+		return Token{}, false
+	}
+	// Checked last: it's the slowest test, and few strings get this far.
+	if looksLikeWords(v) {
 		return Token{}, false
 	}
 	return Token{Value: v, Entropy: h, Hex: isHex}, true
