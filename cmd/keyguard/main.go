@@ -21,7 +21,7 @@ import (
 	"github.com/OrdinaryDev-in/keyguard-security-scanner/internal/scan"
 )
 
-const version = "0.1.0"
+const version = "1.0.0"
 
 // Exit codes: CI only needs to check for non-zero.
 const (
