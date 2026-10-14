@@ -1,0 +1,43 @@
+name: False positive / missed secret
+description: keyguard flagged something harmless, or missed a real secret or risky config
+labels: [detection]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        **Never paste a real secret here, even a revoked one.** Use a fake value with the same prefix, length and character set.
+  - type: dropdown
+    id: kind
+    attributes:
+      label: Type
+      options:
+        - False positive (flagged something that isn't a secret)
+        - False negative (missed a secret or risky config)
+    validations:
+      required: true
+  - type: input
+    id: rule
+    attributes:
+      label: Rule ID
+      description: For a false positive, the rule that fired (shown in JSON/SARIF output, or `keyguard rules`).
+      placeholder: high-entropy-string
+  - type: textarea
+    id: sample
+    attributes:
+      label: Sample
+      description: The line(s) involved, with any secret replaced by a fake of the same shape. Include the file name; some rules only run on certain files.
+      render: text
+    validations:
+      required: true
+  - type: textarea
+    id: context
+    attributes:
+      label: Why is this wrong?
+      description: e.g. "this is a public Firebase config key" or "this is the format of an Example Corp API key, see <docs link>".
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: keyguard version
+      description: Output of `keyguard version`, or the commit you built from.

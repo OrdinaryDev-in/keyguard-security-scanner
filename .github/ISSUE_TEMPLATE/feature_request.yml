@@ -1,0 +1,26 @@
+name: Feature or new check
+description: Suggest a new key format, stack-specific check, output format or flag
+labels: [enhancement]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: What problem would this solve?
+      description: e.g. "Clerk secret keys aren't detected" or "I want to fail CI only on new findings".
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed solution
+      description: For a new key format, describe its shape (prefix, length, charset) and link the provider's docs. Don't paste a real key.
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+  - type: checkboxes
+    id: contribute
+    attributes:
+      label: Contributing
+      options:
+        - label: I'd like to open a PR for this (see CONTRIBUTING.md, "Adding or changing a rule")

@@ -1,0 +1,43 @@
+name: Bug report
+description: keyguard crashed, hung, or produced wrong output
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        **Never paste a real secret here, even a revoked one.** Replace it with a fake value of the same shape.
+        Security issues in keyguard itself go through [private reporting](https://github.com/OrdinaryDev-in/keyguard-security-scanner/security/advisories/new), not here.
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      description: What you expected, and what you got instead.
+    validations:
+      required: true
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: Steps to reproduce
+      description: The exact command, plus a minimal file or directory layout if relevant.
+      placeholder: |
+        keyguard scan . --format html -o report.html
+    validations:
+      required: true
+  - type: textarea
+    id: output
+    attributes:
+      label: Output
+      description: Error message or relevant output. keyguard redacts secrets, but double-check before pasting.
+      render: shell
+  - type: input
+    id: version
+    attributes:
+      label: keyguard version
+      description: Output of `keyguard version`, or the commit you built from.
+    validations:
+      required: true
+  - type: input
+    id: os
+    attributes:
+      label: OS and Go version
+      placeholder: macOS 15, go1.27.2
