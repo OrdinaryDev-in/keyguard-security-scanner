@@ -7,3 +7,5 @@ coverage.out
 !docs/assets/sample-report.html
 .claude/*
 !.claude/launch.json
+# Local-only promo video source and renders (not part of the repo).
+docs/video/
